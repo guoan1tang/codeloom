@@ -25,6 +25,16 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 
 接好后可以直接问 Agent：「`OrderService.create` 改了会影响哪些 API 和测试？」索引是增量的，重复执行 `analyze` 只解析改动过的文件。
 
+## 界面
+
+服务目录 —— 一个服务一棵树：API / MQ / JOB / OUTBOUND / 数据表 / 缓存，右侧直接标出跨服务消费方：
+
+![服务目录](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/tree.png)
+
+点任意 API 的「链路」，看跨仓库调用契约（前端页面 → Feign 调用方 → 提供方 → 数据表）：
+
+![跨仓库链路](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
+
 ## 安装
 
 需要 Node >= 22.13 与 Git。上面的 `npx` 方式无需安装，也可以全局安装：

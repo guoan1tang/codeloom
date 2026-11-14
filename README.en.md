@@ -30,6 +30,16 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 Then ask your agent: "What APIs and tests are affected if I change `OrderService.create`?"
 Indexing is incremental — re-running `analyze` only parses changed files.
 
+## Screenshots
+
+Service tree — one tree per service: API / MQ / JOB / OUTBOUND / tables / cache, with cross-service consumers labelled on the right:
+
+![Service tree](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/tree.png)
+
+Click 「链路」 on any API to see the stitched cross-repo contract (frontend page → Feign caller → provider → table):
+
+![Cross-repo chain](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
+
 ## Install
 
 Requires Node >= 22.13 and Git. The `npx` flow above needs no install; you can also install globally:

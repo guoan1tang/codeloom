@@ -10,16 +10,28 @@
 
 **零原生依赖。** 解析用 tree-sitter WASM，存储用 Node 内置 SQLite，MCP 用官方 SDK。不需要编译、不需要数据库服务、不需要 Docker。代码不出本机。
 
-## 安装
-
-需要 Node >= 22.13 与 Git。
+## 快速开始
 
 ```bash
-npx codeloom-cli analyze https://github.com/you/your-service.git   # 也可以传本地路径
+# 1. 索引一个仓库：本地路径或 Git 地址
+npx codeloom-cli analyze <path|git-url>
+
+# 2. 打开服务树
+npx codeloom-cli serve            # http://127.0.0.1:3111
+
+# 3. 接给 Agent
 claude mcp add codeloom -- npx -y codeloom-cli mcp
 ```
 
-或全局安装：`npm i -g codeloom-cli`。
+接好后可以直接问 Agent：「`OrderService.create` 改了会影响哪些 API 和测试？」索引是增量的，重复执行 `analyze` 只解析改动过的文件。
+
+## 安装
+
+需要 Node >= 22.13 与 Git。上面的 `npx` 方式无需安装，也可以全局安装：
+
+```bash
+npm i -g codeloom-cli
+```
 
 ### 不走 npm（直接从 GitHub 安装）
 

@@ -14,16 +14,29 @@ coding agents over MCP.
 MCP is the official SDK. No compilation, no database service, no Docker. Your code never
 leaves your machine.
 
-## Install
-
-Requires Node >= 22.13 and Git.
+## Quick start
 
 ```bash
-npx codeloom-cli analyze https://github.com/you/your-service.git   # or a local path
+# 1. Index a repository — local path or Git URL
+npx codeloom-cli analyze <path|git-url>
+
+# 2. Open the service tree
+npx codeloom-cli serve            # http://127.0.0.1:3111
+
+# 3. Hand it to your agent
 claude mcp add codeloom -- npx -y codeloom-cli mcp
 ```
 
-Or install globally: `npm i -g codeloom-cli`.
+Then ask your agent: "What APIs and tests are affected if I change `OrderService.create`?"
+Indexing is incremental — re-running `analyze` only parses changed files.
+
+## Install
+
+Requires Node >= 22.13 and Git. The `npx` flow above needs no install; you can also install globally:
+
+```bash
+npm i -g codeloom-cli
+```
 
 ### Without npm (install straight from GitHub)
 

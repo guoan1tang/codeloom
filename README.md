@@ -1,66 +1,52 @@
 # CodeLoom
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+简体中文 | [English](README.en.md)
 
 [![CI](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Code knowledge graph for agents. Indexes any Git repository into a method-level call graph,
-stitches cross-service contracts (Feign / HTTP / MQ) across repositories, and serves it to
-coding agents over MCP.
+面向 Agent 的代码知识图谱。把任意 Git 仓库索引成方法级调用图，跨仓库拼接服务契约（Feign / HTTP / MQ），再通过 MCP 交给编码 Agent 使用。
 
-**Zero native dependencies.** Parsing is tree-sitter WASM, storage is Node's built-in SQLite,
-MCP is the official SDK. No compilation, no database service, no Docker. Your code never
-leaves your machine.
+**零原生依赖。** 解析用 tree-sitter WASM，存储用 Node 内置 SQLite，MCP 用官方 SDK。不需要编译、不需要数据库服务、不需要 Docker。代码不出本机。
 
-## Install
+## 安装
 
-Requires Node >= 22.13 and Git.
+需要 Node >= 22.13 与 Git。
 
-The `codeloom-cli` npm package is not published yet — install straight from GitHub:
+`codeloom-cli` npm 包尚未发布，暂时直接从 GitHub 安装：
 
 ```bash
 npx -y github:guoan1tang/codeloom analyze <path|git-url>
 claude mcp add codeloom -- npx -y github:guoan1tang/codeloom mcp
 ```
 
-This clones the repository and runs it through Node — no registry account needed.
+这种方式会 clone 仓库并用 Node 运行，不需要 registry 账号。
 
-Once the package is on npm:
+npm 包发布后：
 
 ```bash
-npx codeloom-cli analyze https://github.com/you/your-service.git   # or a local path
+npx codeloom-cli analyze https://github.com/you/your-service.git   # 也可以传本地路径
 claude mcp add codeloom -- npx -y codeloom-cli mcp
 npm i -g codeloom-cli
 ```
 
-## Web UI
+## Web 界面
 
 ```bash
 codeloom serve                 # http://127.0.0.1:3111
 ```
 
-Browser UI over the live index. Default view is a service tree — one service at a
-time (switchable): root service → API / MQ / JOB groups → entries with provider
-methods and cross-service consumers (expandable); click any row for real source
-snippets from your local checkout. Also ships impact analysis, a per-endpoint cross-repo
-chain popup opened from tree rows (swimlane playback, real contracts), an agent-loop runner (commit/diff → impact →
-precise test selection), repository management (add / reindex / remove), and a query
-console sharing the MCP engines. Binds 127.0.0.1 only — keep the index local.
+基于实时索引的浏览器界面。默认是服务树——一次看一个服务（可切换）：服务根 → API / MQ / JOB 分组 → 条目（含提供方方法与跨服务消费方，可展开）；点击任意一行可查看本地代码的真实片段。界面还包含影响分析、从树中条目打开的跨仓库链路弹窗（泳道回放、真实契约）、Agent 回路（提交 / diff → 影响 → 精确测试选择）、仓库管理（添加 / 重建 / 删除），以及与 MCP 共用引擎的查询控制台。只监听 127.0.0.1——索引留在本地。
 
-## Configuration (global, UI or file)
+## 配置（全局，界面或文件）
 
-Open **Repositories → 全局配置** in the web UI to edit gateway prefix rules and framework
-adapters. Global config is stored in the graph database and applies to every repository
-at index time; saving can rebuild all indexes in one click.
+在 Web 界面打开 **Repositories → 全局配置**，编辑网关前缀规则与框架适配。全局配置存在图数据库中，索引时对所有仓库生效；保存后可一键重建全部索引。
 
-Per-repository `codeloom.config.json` remains supported for exceptional repos only
-(precedence: defaults < global < repo file).
+单仓库的 `codeloom.config.json` 仍然支持，仅用于例外仓库（优先级：默认 < 全局 < 仓库文件）。
 
-### Options
+### 配置项
 
-Place `codeloom.config.json` at the repository root to adapt framework conventions
-(all keys optional; generic Spring defaults apply):
+在仓库根目录放 `codeloom.config.json` 来适配框架约定（所有键可选，默认按通用 Spring 约定）：
 
 ```json
 {
@@ -75,9 +61,8 @@ Place `codeloom.config.json` at the repository root to adapt framework conventio
 }
 ```
 
-- `gatewayRouters` / `gatewayRoutesFile` (Spring Cloud Gateway yaml: `Path=/prefix/**` + `StripPrefix=n`)
-  strip service prefixes from consumer paths at index time, so frontend/Feign calls join backend endpoints.
-- HTTP wrappers can be auto-detected (files importing axios) or listed explicitly by identifier.
+- `gatewayRouters` / `gatewayRoutesFile`（Spring Cloud Gateway yaml：`Path=/prefix/**` + `StripPrefix=n`）在索引时剥掉消费方路径中的服务前缀，让前端 / Feign 调用与后端端点对上。
+- HTTP 封装可自动识别（import axios 的文件），也可以按标识符显式列出。
 
 ## CLI
 
@@ -90,82 +75,60 @@ codeloom mcp [--db path]
 codeloom serve [--port 3111] [--host 127.0.0.1]
 ```
 
-- `analyze` is incremental: unchanged files (content hash) are skipped. `--full` re-parses
-  everything and refreshes cross-file interface dispatch.
-- Default database: `~/.codeloom/graph.db` (override with `--db` or `CODELOOM_DB`).
-- Indexing a URL clones to a temp dir and deletes it afterwards; only the graph persists.
+- `analyze` 是增量的：内容未变的文件会被跳过。`--full` 全量重解析并刷新跨文件接口分派。
+- 默认数据库：`~/.codeloom/graph.db`（可用 `--db` 或 `CODELOOM_DB` 覆盖）。
+- 索引 URL 时会 clone 到临时目录，结束后删除；只保留图数据。
 
-## MCP tools
+## MCP 工具
 
-| Tool | Purpose |
+| 工具 | 用途 |
 |---|---|
-| `search_symbol` | Find methods / types / endpoints / topics / pages / tests by name, FQN or path |
-| `find_callers` / `find_callees` | Depth-limited call traversal with confidence filter |
-| `impact_analysis` | Changed method → entry points (HTTP, pages, MQ consumers, jobs, tests) |
-| `cross_repo_trace` | Providers / consumers / topics stitched around an endpoint |
-| `graph_query` | Single-hop Cypher subset: `MATCH (a:Method)-[:CALLS]->(b) WHERE a.name='x' RETURN b` |
-| `impact_of_diff` | Unified diff (or commit in a local checkout) → batch impact per entry point |
-| `tests_for_change` | Precise test selection: unit tests + bridged API/UI cases + uncovered risk |
-| `graph_status` | Indexed commits, freshness warnings, static test coverage per repo |
+| `search_symbol` | 按名称、FQN 或路径查找方法 / 类型 / 端点 / Topic / 页面 / 测试 |
+| `find_callers` / `find_callees` | 带深度限制的调用遍历，可按置信度过滤 |
+| `impact_analysis` | 改动方法 → 入口点（HTTP、页面、MQ 消费、Job、测试） |
+| `cross_repo_trace` | 围绕某个端点的提供方 / 消费方 / Topic 拼接 |
+| `graph_query` | 单跳 Cypher 子集：`MATCH (a:Method)-[:CALLS]->(b) WHERE a.name='x' RETURN b` |
+| `impact_of_diff` | 统一 diff（或本地仓库中的某个提交）→ 按入口点批量评估影响 |
+| `tests_for_change` | 精确测试选择：单测 + 桥接的接口 / UI 用例 + 未覆盖风险 |
+| `graph_status` | 各仓库已索引的提交、新鲜度告警、静态测试覆盖 |
 
-Data-layer edges: DB tables (MyBatis XML mappers, @Select/@Insert/@Update/@Delete, SQL string literals) via READS_TABLE/WRITES_TABLE, and Redis/cache keys via USES_CACHE; the tree-row chain popup shows 数据库/Redis lanes downstream of provider methods.
+数据层边：数据库表（MyBatis XML mapper、`@Select/@Insert/@Update/@Delete`、SQL 字符串字面量）通过 READS_TABLE / WRITES_TABLE；Redis / 缓存键通过 USES_CACHE；树中条目的链路弹窗会显示提供方方法下游的数据库 / Redis 泳道。
 
-Call edges carry confidence: `certain` (direct), `inferred` (unique interface impl / DI),
-`speculative` (multiple candidates). Traversal defaults to certain+inferred; high fan-in
-utility methods are truncated from impact chains (default threshold 30, configurable).
+调用边带置信度：`certain`（直接调用）、`inferred`（唯一实现 / 依赖注入）、`speculative`（多个候选）。遍历默认取 certain + inferred；高扇入的工具方法会从影响链中截断（默认阈值 30，可配置）。
 
-## What gets extracted
+## 能提取什么
 
-- **Java**: classes / interfaces / methods, imports, extends / implements, call sites with
-  receiver resolution (fields, locals, params, `new`), Spring DI dispatch, `@RestController`
-  mappings → endpoints, `@FeignClient` → consumer edges, RocketMQ / Kafka listeners and
-  producer sends → topics, `@Scheduled` → job entries, JUnit `@Test` / `src/test` → test nodes.
-- **TypeScript / JavaScript**: imports, functions / classes / methods, calls, `fetch` /
-  `axios` / `http` client calls → endpoint edges, `src/pages|views` → page nodes,
-  jest `it()` / `test()` → test nodes.
-- **Cross-repo**: endpoints and topics are global join keys — a Feign client in repo A and a
-  controller in repo B meet on the same endpoint node. Endpoints with no provider are marked
-  external boundaries.
+- **Java**：类 / 接口 / 方法、import、extends / implements、带接收者解析（字段、局部变量、参数、`new`）的调用点、Spring 依赖注入分派、`@RestController` 映射 → 端点、`@FeignClient` → 消费边、RocketMQ / Kafka 监听与生产发送 → Topic、`@Scheduled` → Job 入口、JUnit `@Test` / `src/test` → 测试节点。
+- **TypeScript / JavaScript**：import、函数 / 类 / 方法、调用、`fetch` / `axios` / `http` 客户端调用 → 端点边、`src/pages|views` → 页面节点、jest `it()` / `test()` → 测试节点。
+- **跨仓库**：端点与 Topic 是全局连接键——仓库 A 的 Feign 客户端与仓库 B 的 Controller 会落在同一个端点节点上。没有提供方的端点标记为外部边界。
 
-## Language packs
+## 语言包
 
-A pack is a module exporting `extensions`, `grammar` (a `tree-sitter-wasms` name),
-`pass1(ctx, tree)` (symbols + contracts + call sites) and `pass2Types` / `pass2Calls`
-(cross-file resolution). See `src/packs/java.js` and `src/packs/typescript.js`.
-Adding a language = adding a pack; the core, storage, traversal and MCP surface are
-language-agnostic.
+一个语言包就是一个模块，导出 `extensions`、`grammar`（`tree-sitter-wasms` 的语法名）、`pass1(ctx, tree)`（符号 + 契约 + 调用点）与 `pass2Types` / `pass2Calls`（跨文件解析）。参考 `src/packs/java.js` 和 `src/packs/typescript.js`。新增一种语言 = 新增一个语言包；核心、存储、遍历和 MCP 接口都与语言无关。
 
-## Limitations (P0)
+## 已知限制（P0）
 
-- Syntax-level resolution: reflection, AOP proxies and dynamic dispatch are invisible.
-  Edges say what the code states, not what the runtime does — confidence is exposed so
-  agents can reason about it.
-- Gateway route rewriting (prefix stripping) is not yet ingested; consumer paths must match
-  provider paths after normalization (`:id` / `{id}` / `${…}` → `{param}`).
-- Incremental re-parse refreshes dispatch edges for changed files only; use `--full` after
-  adding implementations of existing interfaces.
-- Overloads resolve to the first matching method name.
-- Case nodes (`COVERS` edges) are ingested from your test-management export; the bridge
-  format is documented in `src/graph.js` (`testsForChange`).
+- 语法级解析：反射、AOP 代理、动态分派不可见。边表达的是代码声明，而不是运行时行为——置信度会暴露出来，供 Agent 判断。
+- 网关路由改写尚未从网关仓库自动采集；消费方路径需在归一化后与提供方一致（`:id` / `{id}` / `${…}` → `{param}`）。
+- 增量重解析只刷新变更文件的分派边；给已有接口新增实现后请用 `--full`。
+- 重载方法会解析到第一个同名方法。
+- 用例节点（`COVERS` 边）来自你的测试管理导出；桥接格式见 `src/graph.js`（`testsForChange`）。
 
-## Capability tests
+## 能力测试
 
-Sample projects live in `test/fixtures/<name>/`; each ships an `expect.json` with declarative
-graph assertions (edges, node properties, summary counts) executed by `test/harness/index.js`.
-Adding a fixture requires no test code — see `test/fixtures/README.md`.
+示例项目在 `test/fixtures/<name>/`，每个都带一个 `expect.json`，用声明式断言描述期望的图（边、节点属性、汇总数量），由 `test/harness/index.js` 执行。新增 fixture 不需要写测试代码——见 `test/fixtures/README.md`。
 
-## Contributing
+## 贡献
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Capability fixtures live in `test/fixtures/` —
-adding a project structure is a directory plus an `expect.json`, no test code.
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。能力 fixture 放在 `test/fixtures/`——新增一种项目结构 = 一个目录 + 一个 `expect.json`，不用写测试代码。
 
-## Development
+## 开发
 
 ```bash
-npm install --registry=https://registry.npmmirror.com   # or your registry
-npm test                                               # 40 tests: fixtures, MCP, API, perf smoke
+npm install --registry=https://registry.npmmirror.com   # 或你的 registry
+npm test                                               # 40 个测试：fixture、MCP、API、性能冒烟
 ```
 
-## License
+## 许可证
 
 Apache-2.0

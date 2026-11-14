@@ -1,5 +1,7 @@
 # CodeLoom
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
@@ -15,18 +17,22 @@ leaves your machine.
 
 Requires Node >= 22.13 and Git.
 
+The `codeloom-cli` npm package is not published yet — install straight from GitHub:
+
+```bash
+npx -y github:guoan1tang/codeloom analyze <path|git-url>
+claude mcp add codeloom -- npx -y github:guoan1tang/codeloom mcp
+```
+
+This clones the repository and runs it through Node — no registry account needed.
+
+Once the package is on npm:
+
 ```bash
 npx codeloom-cli analyze https://github.com/you/your-service.git   # or a local path
 claude mcp add codeloom -- npx -y codeloom-cli mcp
+npm i -g codeloom-cli
 ```
-
-Or install globally: `npm i -g codeloom-cli`.
-
-### Without npm (install straight from GitHub)
-
-
-
-This clones the repository and runs it through Node — no registry account needed.
 
 ## Web UI
 

@@ -111,7 +111,7 @@ codeloom serve                 # http://127.0.0.1:3111
 }
 ```
 
-- `tableNameFallback`：实体类没有 `@TableName` 时，按 MyBatis-Plus 默认命名推导表名（`*DO`/`*Entity`/`*PO`/`*VO`/`*DTO` 去掉后缀后驼峰转下划线）；默认关闭。
+- `tableNameFallback`：实体类没有 `@TableName` 时，按 MyBatis-Plus 默认命名推导表名（`*DO`/`*Entity` 去掉后缀后驼峰转下划线）；默认关闭。
 - `gatewayRouters` / `gatewayRoutesFile`（Spring Cloud Gateway yaml：`Path=/prefix/**` + `StripPrefix=n`）在索引时剥掉消费方路径中的服务前缀，让前端 / Feign 调用与后端端点对上。
 - HTTP 封装可自动识别（import axios 的文件），也可以按标识符显式列出。
 

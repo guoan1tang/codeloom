@@ -127,7 +127,7 @@ Place `codeloom.config.json` at the repository root to adapt framework conventio
 ```
 
 - `tableNameFallback`: when an entity has no `@TableName`, derive it with MyBatis-Plus default naming
-  (drop `*DO`/`*Entity`/`*PO`/`*VO`/`*DTO`, then camelCase → snake_case); off by default.
+  (drop `*DO`/`*Entity`, then camelCase → snake_case); off by default.
 - `gatewayRouters` / `gatewayRoutesFile` (Spring Cloud Gateway yaml: `Path=/prefix/**` + `StripPrefix=n`)
   strip service prefixes from consumer paths at index time, so frontend/Feign calls join backend endpoints.
 - HTTP wrappers can be auto-detected (files importing axios) or listed explicitly by identifier.

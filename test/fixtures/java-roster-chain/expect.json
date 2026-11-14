@@ -1,0 +1,20 @@
+{
+  "edges": [
+    { "s": "RosterAuditController.page", "t": "ep:POST /api/roster-audit/page", "rel": "EXPOSES" },
+    { "s": "RosterAuditController.page", "t": "RosterAuditService.getRosterAuditPage", "rel": "CALLS", "conf": "certain" },
+    { "s": "RosterAuditService.getRosterAuditPage", "t": "UserPermissionManager.listShopIdByUserId", "rel": "CALLS", "conf": "certain" },
+    { "s": "RosterAuditService.getRosterAuditPage", "t": "table:user_sign_application", "rel": "READS_TABLE" },
+    { "s": "UserPermissionManager.listShopIdByUserId", "t": "UserShopCorrelationManager.expandDeptToShopIds", "rel": "CALLS", "conf": "certain" },
+    { "s": "UserPermissionManager.listShopIdByUserId", "t": "ShopGroupManager.listByIds", "rel": "CALLS", "conf": "certain" },
+    { "s": "UserPermissionManager.listShopIdByUserId", "t": "table:user_permission", "rel": "READS_TABLE" },
+    { "s": "UserPermissionManager.listShopIdByUserId", "t": "table:shop_info", "rel": "READS_TABLE" },
+    { "s": "UserShopCorrelationManager.expandDeptToShopIds", "t": "table:company_dept", "rel": "READS_TABLE" },
+    { "s": "UserShopCorrelationManager.expandDeptToShopIds", "t": "table:shop_info", "rel": "READS_TABLE" },
+    { "s": "ShopGroupManager.listByIds", "t": "table:shop_group", "rel": "READS_TABLE" },
+    { "s": "ShopGroupJobService.expandDeptToShopIds", "t": "table:company_dept", "rel": "READS_TABLE" }
+  ],
+  "noOutgoing": [
+    { "s": "PaginationUtils.queryAllWithPagination", "rel": "READS_TABLE" }
+  ],
+  "summary": { "repos": 1, "tables": 5, "endpoints": 1, "http": 1 }
+}

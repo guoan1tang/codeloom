@@ -140,9 +140,9 @@ export function pass1(ctx, tree) {
     if (tableAnn) {
       const tname = annValue(tableAnn) || tableAnn.args.get('name') || tableAnn.args.get('value') || '';
       entityTable = String(tname).replace(/^["'{]+|["'}]+$/g, '').trim();
-    } else if (ctx.config && ctx.config.tableNameFallback && /(DO|Entity|PO|VO|DTO)$/.test(name)) {
+    } else if (ctx.config && ctx.config.tableNameFallback && /(DO|Entity)$/.test(name)) {
       // MyBatis-Plus default naming: class name minus its suffix, camelCase → snake_case
-      entityTable = name.replace(/(DO|Entity|PO|VO|DTO)$/, '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+      entityTable = name.replace(/(DO|Entity)$/, '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
     }
     if (entityTable) {
       ctx.node({ id: 'table:' + entityTable, type: 'table', label: entityTable, props: {} });

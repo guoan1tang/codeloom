@@ -12,7 +12,7 @@ export const DEFAULT_CONFIG = {
   jobAnnotations: ['Scheduled', 'XxlJob', 'ElasticSimpleJob'],
   mqListenerAnnotations: ['RabbitListener', 'KafkaListener'],   // method-level consumers
   tableAnnotations: ['TableName', 'Table'],
-  // derive a table name for *DO / *Entity / *PO / *VO / *DTO classes without @TableName
+  // derive a table name for *DO / *Entity classes without @TableName
   // using MyBatis-Plus default naming (camelCase → snake_case after dropping the suffix)
   tableNameFallback: false,
   // Gateway prefix stripping for consumer paths: [{prefix:'/api-order', strip:1}]

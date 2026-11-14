@@ -1,0 +1,13 @@
+{
+  "edges": [
+    { "s": "OrderManager.listAll", "t": "table:order", "rel": "READS_TABLE" },
+    { "s": "OrderManager.count", "t": "table:order", "rel": "READS_TABLE" },
+    { "s": "OrderManager.save", "t": "table:order", "rel": "WRITES_TABLE" },
+    { "s": "OrderManager.update", "t": "table:order", "rel": "WRITES_TABLE" },
+    { "s": "OrderManager.remove", "t": "table:order", "rel": "WRITES_TABLE" },
+    { "s": "OrderPOManager.get", "t": "table:t_order_custom", "rel": "READS_TABLE" },
+    { "s": "UserPermissionManager.listByUser", "t": "table:user_permission", "rel": "READS_TABLE" }
+  ],
+  "noNodes": ["^order_po$", "^order_entity$"],
+  "summary": { "repos": 1, "tables": 3 }
+}

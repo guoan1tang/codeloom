@@ -105,11 +105,13 @@ codeloom serve                 # http://127.0.0.1:3111
   "jobAnnotations": ["Scheduled", "XxlJob", "ElasticSimpleJob"],
   "mqListenerAnnotations": ["RabbitListener", "KafkaListener"],
   "tableAnnotations": ["TableName", "Table"],
+  "tableNameFallback": false,
   "gatewayRouters": [{ "prefix": "/api-order", "strip": 1 }],
   "gatewayRoutesFile": "config/gateway-routes.yaml"
 }
 ```
 
+- `tableNameFallback`：实体类没有 `@TableName` 时，按 MyBatis-Plus 默认命名推导表名（`*DO`/`*Entity`/`*PO`/`*VO`/`*DTO` 去掉后缀后驼峰转下划线）；默认关闭。
 - `gatewayRouters` / `gatewayRoutesFile`（Spring Cloud Gateway yaml：`Path=/prefix/**` + `StripPrefix=n`）在索引时剥掉消费方路径中的服务前缀，让前端 / Feign 调用与后端端点对上。
 - HTTP 封装可自动识别（import axios 的文件），也可以按标识符显式列出。
 
@@ -141,7 +143,7 @@ codeloom serve [--port 3111] [--host 127.0.0.1]
 | `tests_for_change` | 精确测试选择：单测 + 桥接的接口 / UI 用例 + 未覆盖风险 |
 | `graph_status` | 各仓库已索引的提交、新鲜度告警、静态测试覆盖 |
 
-数据层边：数据库表（MyBatis XML mapper、`@Select/@Insert/@Update/@Delete`、SQL 字符串字面量）通过 READS_TABLE / WRITES_TABLE；Redis / 缓存键通过 USES_CACHE；树中条目的链路弹窗会显示提供方方法下游的数据库 / Redis 泳道。
+数据层边：数据库表（MyBatis XML mapper、`@Select/@Insert/@Update/@Delete`、SQL 字符串字面量、`BaseMapper` / 自定义 `BaseMapperX` 基类、`ServiceImpl` / `IService` 通用 CRUD、`lambdaQuery` 链，以及把 Registry 传给工具类执行查询的委托写法）通过 READS_TABLE / WRITES_TABLE；Redis / 缓存键通过 USES_CACHE；树中条目的链路弹窗会显示提供方方法下游的数据库 / Redis 泳道。
 
 调用边带置信度：`certain`（直接调用）、`inferred`（唯一实现 / 依赖注入）、`speculative`（多个候选）。遍历默认取 certain + inferred；高扇入的工具方法会从影响链中截断（默认阈值 30，可配置）。
 

@@ -120,11 +120,14 @@ Place `codeloom.config.json` at the repository root to adapt framework conventio
   "jobAnnotations": ["Scheduled", "XxlJob", "ElasticSimpleJob"],
   "mqListenerAnnotations": ["RabbitListener", "KafkaListener"],
   "tableAnnotations": ["TableName", "Table"],
+  "tableNameFallback": false,
   "gatewayRouters": [{ "prefix": "/api-order", "strip": 1 }],
   "gatewayRoutesFile": "config/gateway-routes.yaml"
 }
 ```
 
+- `tableNameFallback`: when an entity has no `@TableName`, derive it with MyBatis-Plus default naming
+  (drop `*DO`/`*Entity`/`*PO`/`*VO`/`*DTO`, then camelCase → snake_case); off by default.
 - `gatewayRouters` / `gatewayRoutesFile` (Spring Cloud Gateway yaml: `Path=/prefix/**` + `StripPrefix=n`)
   strip service prefixes from consumer paths at index time, so frontend/Feign calls join backend endpoints.
 - HTTP wrappers can be auto-detected (files importing axios) or listed explicitly by identifier.
@@ -158,7 +161,7 @@ codeloom serve [--port 3111] [--host 127.0.0.1]
 | `tests_for_change` | Precise test selection: unit tests + bridged API/UI cases + uncovered risk |
 | `graph_status` | Indexed commits, freshness warnings, static test coverage per repo |
 
-Data-layer edges: DB tables (MyBatis XML mappers, @Select/@Insert/@Update/@Delete, SQL string literals) via READS_TABLE/WRITES_TABLE, and Redis/cache keys via USES_CACHE; the tree-row chain popup shows 数据库/Redis lanes downstream of provider methods.
+Data-layer edges: DB tables (MyBatis XML mappers, @Select/@Insert/@Update/@Delete, SQL string literals, `BaseMapper` / custom `BaseMapperX` bases, `ServiceImpl` / `IService` CRUD, `lambdaQuery` chains, and registry-passed utility helpers) via READS_TABLE/WRITES_TABLE, and Redis/cache keys via USES_CACHE; the tree-row chain popup shows 数据库/Redis lanes downstream of provider methods.
 
 Call edges carry confidence: `certain` (direct), `inferred` (unique interface impl / DI),
 `speculative` (multiple candidates). Traversal defaults to certain+inferred; high fan-in

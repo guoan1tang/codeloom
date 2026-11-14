@@ -48,3 +48,8 @@ test('limitations: documented blind spots stay undocumented-free (no false posit
   const fx = await setupFixture(t, 'limitations');
   assertFixture(fx.g, 'limitations');
 });
+
+test('java-mapper-base: custom BaseMapper subclass resolves entity tables', async (t) => {
+  const fx = await setupFixture(t, 'java-mapper-base');
+  assertFixture(fx.g, 'java-mapper-base');
+});

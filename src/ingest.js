@@ -194,6 +194,20 @@ export async function ingestRepo(db, opts) {
     // two phases: register all types/impls first, then resolve call sites against the complete index
     for (const f of javaChanged) { ctx.file = f; packOf(f).pass2Types(ctx, f); }
     for (const f of javaChanged) { ctx.file = f; packOf(f).pass2Calls(ctx, f); }
+    // delegated table access: helper(registryOrMapper, …) runs the query inside, so the
+    // table edges live on the helper — attribute them to the call site as well
+    const tableByMethod = new Map();
+    for (const e of ctx.edges) {
+      if (e.rel !== 'READS_TABLE' && e.rel !== 'WRITES_TABLE') continue;
+      if (!tableByMethod.has(e.s)) tableByMethod.set(e.s, []);
+      tableByMethod.get(e.s).push(e);
+    }
+    for (const e of ctx.edges.slice()) {
+      if (e.rel !== 'CALLS' || !/arg0repo/.test(e.ev || '')) continue;
+      for (const t of tableByMethod.get(e.t) || []) {
+        ctx.edge({ s: e.s, t: t.t, rel: t.rel, site: e.site, file: e.file, ev: '经由仓库参数委托' });
+      }
+    }
     // flush
     db.exec('BEGIN');
     for (const n of ctx.nodes.values()) insertNode(db, n);

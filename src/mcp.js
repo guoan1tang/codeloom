@@ -154,7 +154,19 @@ function graphQuery(g, q) {
     };
   }
   if (isCount) return { pattern: q.trim(), count: uniq.length };
-  return { pattern: q.trim(), count: uniq.length, results: uniq.slice(0, 20).map(n => ({ id: n.id, label: n.label, type: n.type, repo: n.repo })) };
+  // same label in several classes/repos: expose the full id plus fqn/file so the agent
+  // can pick the right node instead of attributing the first hit to every caller
+  const labelCount = new Map();
+  for (const n of uniq) labelCount.set(n.label, (labelCount.get(n.label) || 0) + 1);
+  return {
+    pattern: q.trim(),
+    count: uniq.length,
+    results: uniq.slice(0, 20).map(n => ({
+      id: n.id, label: n.label, type: n.type, repo: n.repo,
+      fqn: n.fqn || undefined, file: n.file || undefined,
+      ambiguous: labelCount.get(n.label) > 1 || undefined,
+    })),
+  };
 }
 
 export function createServer(dbPath = defaultDbPath()) {

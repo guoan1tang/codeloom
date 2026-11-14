@@ -136,13 +136,17 @@ export function pass1(ctx, tree) {
     const isTest = isTestFile || /Test$/.test(name) || kind === 'test-class';
     const isController = !!(ann(anns, 'RestController') || ann(anns, 'Controller'));
     const tableAnn = (ctx.config && ctx.config.tableAnnotations || ['TableName','Table']).map(n => ann(anns, n)).find(Boolean);
+    let entityTable = '';
     if (tableAnn) {
       const tname = annValue(tableAnn) || tableAnn.args.get('name') || tableAnn.args.get('value') || '';
-      const clean = String(tname).replace(/^["'{]+|["'}]+$/g, '').trim();
-      if (clean) {
-        ctx.node({ id: 'table:' + clean, type: 'table', label: clean, props: {} });
-        ctx.entityTables.set(tid, clean);
-      }
+      entityTable = String(tname).replace(/^["'{]+|["'}]+$/g, '').trim();
+    } else if (ctx.config && ctx.config.tableNameFallback && /(DO|Entity|PO|VO|DTO)$/.test(name)) {
+      // MyBatis-Plus default naming: class name minus its suffix, camelCase → snake_case
+      entityTable = name.replace(/(DO|Entity|PO|VO|DTO)$/, '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    }
+    if (entityTable) {
+      ctx.node({ id: 'table:' + entityTable, type: 'table', label: entityTable, props: {} });
+      ctx.entityTables.set(tid, entityTable);
     }
     ctx.node({ id: tid, type: 'type', kind: isTest ? 'test-class' : kind, label: name, fqn: `${scope.package ? scope.package + '.' : ''}${name}`, start_line: node.startPosition.row + 1, end_line: node.endPosition.row + 1, props: { annotations: anns.map(a => a.name), controller: isController, doc: docOf(node) || undefined, apidoc: annoDoc(anns) || undefined } });
     ctx.edge({ s: `${repo}#repo`, t: tid, rel: 'CONTAINS' });
@@ -150,12 +154,23 @@ export function pass1(ctx, tree) {
     ctx.typeIndexPush(name, tid);
     const sup = node.childForFieldName('superclass');
     const ifaces = node.childForFieldName('interfaces');
-    typeRels.push({ tid, superName: sup ? lastSeg(sup.text.replace(/^extends\s+/, '')) : null, ifaceNames: ifaces ? ifaces.namedChildren.map(c => lastSeg(c.text)) : [] });
+    const bare = s => String(s || '').replace(/<[^>]*>/g, '').trim();
+    const extIfaces = node.namedChildren.filter(c => c.type === 'extends_interfaces');
+    typeRels.push({
+      tid,
+      superName: sup ? lastSeg(bare(sup.text).replace(/^extends\s+/, '')) : null,
+      ifaceNames: ifaces ? ifaces.namedChildren.map(c => lastSeg(bare(c.text))) : [],
+      // interface extends interface: type inheritance, not an implementation
+      superIfaceNames: extIfaces.flatMap(c => bare(c.text).replace(/^extends\s+/, '').split(','))
+        .map(s => lastSeg(s.trim())).filter(Boolean),
+    });
     const superText = [sup && sup.text, ifaces && ifaces.text, ...node.namedChildren.filter(c => c.type === 'extends_interfaces').map(c => c.text)].filter(Boolean).join(' ');
-    const bm = superText.match(/(?:BaseMapper|JpaRepository|CrudRepository|PagingAndSortingRepository)\s*<\s*([\w.]+)/);
+    const bm = superText.match(/(?:BaseMapper\w*|JpaRepository|CrudRepository|PagingAndSortingRepository)\s*<\s*([\w.]+)/);
     if (bm) ctx.mapperEntity.set(tid, lastSeg(bm[1]));
     const si = superText.match(/ServiceImpl\s*<\s*[\w.]+\s*,\s*([\w.]+)\s*>/);
     if (si) ctx.implEntity.set(tid, lastSeg(si[1]));
+    const isvc = superText.match(/IService\s*<\s*([\w.]+)\s*>/);
+    if (isvc && !ctx.implEntity.get(tid)) ctx.implEntity.set(tid, lastSeg(isvc[1]));
     return { tid, anns, isTest };
   }
 
@@ -323,11 +338,17 @@ export function pass1(ctx, tree) {
         if (locals.has(t)) recv = { kind: 'type', name: locals.get(t) };
         else if (scope.fields.has(t)) recv = { kind: 'type', name: scope.fields.get(t) };
         else if (scope.classes.has(t) || scope.imports.has(t)) recv = { kind: 'type', name: t };
-        else recv = { kind: 'unknown' };
+        // a class from another file in the same package (e.g. PaginationUtils.queryAll)
+        else recv = { kind: 'type', name: t };
       } else if (obj.type === 'object_creation_expression') {
         recv = { kind: 'type', name: lastSeg(fieldName(obj, 'type', ['type_identifier', 'scoped_type_identifier', 'generic_type']) || '') };
       } else recv = { kind: 'unknown' };
-      ctx.pending.push({ file, methodId: mid, classId, recv, name, line: node.startPosition.row + 1 });
+      const firstArg = args && args.namedChildren[0];
+      const arg0Repo = !!(firstArg && firstArg.type === 'identifier' && /(Registry|Mapper|Repository)$/.test(firstArg.text));
+      const arg0Type = firstArg && firstArg.type === 'identifier'
+        ? (locals.get(firstArg.text) || scope.fields.get(firstArg.text) || null)
+        : null;
+      ctx.pending.push({ file, methodId: mid, classId, recv, name, line: node.startPosition.row + 1, arg0Repo, arg0Type });
     }
     for (const c of node.namedChildren) walkCalls(c, mid, classId, locals);
   }
@@ -427,6 +448,7 @@ export function pass2Types(ctx, file) {
   // inheritance
   for (const r of ctx.typeRels.filter(r => r.file === file)) {
     if (r.superName) for (const t of resolveType(r.superName)) ctx.edge({ s: r.tid, t, rel: 'EXTENDS', file });
+    for (const n of r.superIfaceNames || []) for (const t of resolveType(n)) ctx.edge({ s: r.tid, t, rel: 'EXTENDS', file });
     for (const i of r.ifaceNames) for (const t of resolveType(i)) {
       ctx.edge({ s: r.tid, t, rel: 'IMPLEMENTS', file });
       ctx.implPush(t, r.tid);
@@ -452,6 +474,19 @@ export function pass2Types(ctx, file) {
   }
 }
 
+// MyBatis-Plus / JPA builtin repository methods: when the receiver is a mapper or
+// ServiceImpl bound to an entity, these calls hit that entity's table even though the
+// base class body lives outside the repo (or is overridden by a default method).
+const MP_CRUD = new Set([
+  'selectById', 'selectBatchIds', 'selectByIds', 'selectList', 'selectListByIds', 'selectPage',
+  'selectCount', 'selectOne', 'selectMaps', 'selectObjs', 'selectByMap', 'exists',
+  'insert', 'insertBatch', 'insertOrUpdate', 'update', 'updateById', 'updateBatchById',
+  'delete', 'deleteById', 'deleteBatchIds', 'deleteByMap', 'save', 'saveBatch', 'saveOrUpdate',
+  'remove', 'removeById', 'removeByIds', 'removeBatchByIds', 'page', 'list', 'listByIds', 'count', 'getById',
+  // Spring Data JPA
+  'findById', 'findAll', 'findAllById', 'existsById', 'saveAll', 'deleteAll', 'deleteAllById', 'getOne',
+]);
+
 export function pass2Calls(ctx, file) {
   const scope = ctx.scopes.get(file);
   if (!scope) return;
@@ -472,23 +507,50 @@ export function pass2Calls(ctx, file) {
     } else if (site.recv.kind === 'type') typeIds = resolveType(site.recv.name);
     if (!typeIds.length) { ctx.stats.unresolved++; continue; }
     for (const tid of typeIds) {
+      const entName = ctx.mapperEntity.get(tid) || ctx.implEntity.get(tid);
+      if (entName && MP_CRUD.has(site.name)) {
+        const entIds = resolveType(entName);
+        let table = '';
+        for (const eid of entIds) { table = ctx.entityTables.get(eid) || ''; if (table) break; }
+        if (table) {
+          const write = /^(insert|save|update|delete|remove|saveOrUpdate|saveBatch|updateById)/i.test(site.name);
+          ctx.edge({ s: site.methodId, t: 'table:' + table, rel: write ? 'WRITES_TABLE' : 'READS_TABLE', site: `${file}:${site.line}`, file });
+          // overridden default methods (e.g. a mapper's selectPage) still exist as nodes:
+          // keep the call edge too, but skip when the body is outside the repo
+          if (!ctx.methodsOf.get(tid)?.get(site.name)) continue;
+        }
+      }
+      // helper(registry, …): the query runs inside a generic utility, but the entity is
+      // decided by the caller's argument — attribute the table access to the caller
+      if (site.arg0Type) {
+        for (const aid of resolveType(site.arg0Type)) {
+          const ent = ctx.mapperEntity.get(aid) || ctx.implEntity.get(aid);
+          if (!ent) continue;
+          let table = '';
+          for (const eid of resolveType(ent)) { table = ctx.entityTables.get(eid) || ''; if (table) break; }
+          if (!table) continue;
+          const write = /^(insert|save|update|delete|remove)/i.test(site.name);
+          ctx.edge({ s: site.methodId, t: 'table:' + table, rel: write ? 'WRITES_TABLE' : 'READS_TABLE', site: `${file}:${site.line}`, file, ev: '仓库参数委托' });
+          break;
+        }
+      }
       const target = ctx.methodsOf.get(tid)?.get(site.name);
       if (!target) {
-        const entName = ctx.mapperEntity.get(tid) || ctx.implEntity.get(tid);
-        if (entName) {
-          const entIds = resolveType(entName);
+        // repository/registry style calls that are not in the builtin list
+        // (lambdaQuery, custom wrappers) still reach the entity's table
+        if (entName && /(query|select|list|page|count|get|find|save|insert|update|delete|remove|exists)/i.test(site.name)) {
           let table = '';
-          for (const eid of entIds) { table = ctx.entityTables.get(eid) || ''; if (table) break; }
+          for (const eid of resolveType(entName)) { table = ctx.entityTables.get(eid) || ''; if (table) break; }
           if (table) {
-            const write = /^(insert|save|update|delete|remove|saveOrUpdate|saveBatch|updateById)/i.test(site.name);
-            ctx.edge({ s: site.methodId, t: 'table:' + table, rel: write ? 'WRITES_TABLE' : 'READS_TABLE', site: `${file}:${site.line}`, file });
+            const write = /^(insert|save|update|delete|remove)/i.test(site.name);
+            ctx.edge({ s: site.methodId, t: 'table:' + table, rel: write ? 'WRITES_TABLE' : 'READS_TABLE', site: `${file}:${site.line}`, file, ev: '仓储调用' });
             continue;
           }
         }
         ctx.stats.unresolved++; continue;
       }
       const ambiguous = typeIds.length > 1;
-      ctx.edge({ s: site.methodId, t: target, rel: 'CALLS', conf: ambiguous ? 'speculative' : 'certain', ev: ambiguous ? 'simple-name 多候选' : '', site: `${file}:${site.line}`, file });
+      ctx.edge({ s: site.methodId, t: target, rel: 'CALLS', conf: ambiguous ? 'speculative' : 'certain', ev: [ambiguous ? 'simple-name 多候选' : '', site.arg0Repo ? 'arg0repo' : ''].filter(Boolean).join(' ') || '', site: `${file}:${site.line}`, file });
       const tnode = ctx.nodes.get(tid);
       if (tnode && tnode.kind === 'interface') {
         const impls = ctx.impls.get(tid) || [];

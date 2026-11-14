@@ -1,0 +1,8 @@
+{
+  "edges": [
+    { "s": "UserService.findById", "t": "table:t_sys_user", "rel": "READS_TABLE" },
+    { "s": "UserService.save", "t": "table:t_sys_user", "rel": "WRITES_TABLE" },
+    { "s": "UserService.list", "t": "table:t_sys_user", "rel": "READS_TABLE" }
+  ],
+  "summary": { "repos": 1, "tables": 1 }
+}

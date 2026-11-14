@@ -35,6 +35,31 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 
 ![跨仓库链路](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
 
+## 实测
+
+同一模型、同一组问题，唯一变量是是否接入 codeloom；两条臂都只允许读文件 / 搜索，禁用 Bash。完整方法与复现命令见 [docs/benchmark.md](docs/benchmark.md)。
+
+**单仓库：ruoyi-vue-pro（7,673 个 Java 文件）**
+
+| 任务 | 只读源码 | 接入 codeloom |
+|---|---|---|
+| 接口调用链 + 用到的表 | 114s · 25.9 万 token | **82s · 23.5 万 token** |
+| 改方法的影响面 | 59s · 7.1 万 token · 读 1 个文件 | **47s · 读 0 个文件** |
+
+单仓库下省 20–30% 时间；token 持平（MCP 工具 schema 有固定开销），优势在"不用读源码"。
+
+**跨仓库：mall4cloud（order / product 拆成两个仓库）**
+
+问题：下单锁库存时 product 服务最终写哪些表（答案：`sku_stock`、`spu_extension`、`sku_stock_lock`）。
+
+| | 只检出 order | 两个仓库都检出 | 接入 codeloom（只检出 order） |
+|---|---|---|---|
+| 耗时 | 37.7s | 68.1s | **46.3s** |
+| token | 10.6 万 | 16.5 万 | **9.0 万** |
+| 答案 | ❌ 无法给出 | ✅ 3 张表 | ✅ 3 张表 + 完整链路 |
+
+跨仓库场景下省 32% 时间、46% token —— 省的是"不用把另一个仓库读进上下文"。
+
 ## 给 Agent 使用（MCP）
 
 MCP 服务通过 stdio 暴露 9 个工具，读取同一份本地图谱。Claude Code 一行接入：

@@ -40,6 +40,31 @@ Click 「链路」 on any API to see the stitched cross-repo contract (frontend 
 
 ![Cross-repo chain](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
 
+## Benchmark
+
+Same model, same questions; the only variable is whether codeloom is attached. Both arms may only read/search files (no Bash). Full method and reproduction commands: [docs/benchmark.md](docs/benchmark.md).
+
+**Single repo: ruoyi-vue-pro (7,673 Java files)**
+
+| Task | Source only | With codeloom |
+|---|---|---|
+| Endpoint call chain + tables | 114s · 259k tokens | **82s · 235k tokens** |
+| Impact of changing a method | 59s · 71k tokens · 1 file read | **47s · 0 files read** |
+
+20–30% faster on a single repo; tokens are on par (MCP tool schemas cost a fixed amount), the win is not reading source.
+
+**Cross-repo: mall4cloud (order / product split into two repos)**
+
+Question: which tables does product write when locking stock (answer: `sku_stock`, `spu_extension`, `sku_stock_lock`).
+
+| | order checked out only | both repos checked out | codeloom (order only) |
+|---|---|---|---|
+| Time | 37.7s | 68.1s | **46.3s** |
+| Tokens | 106k | 165k | **90k** |
+| Answer | ❌ cannot tell | ✅ 3 tables | ✅ 3 tables + full chain |
+
+32% faster and 46% fewer tokens across repos — the saving is not reading the other repository.
+
 ## Use with agents (MCP)
 
 The MCP server exposes 9 tools over stdio against the same local graph. One line in Claude Code:

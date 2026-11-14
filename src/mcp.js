@@ -50,6 +50,25 @@ function resolveEndpoint(g, ref) {
   return hits[0]?.id || null;
 }
 
+// Tables and caches touched anywhere in the provider call tree (depth 2).
+function collectData(g, ids) {
+  const tables = [], caches = [], seen = new Set();
+  for (const id of ids) {
+    for (const e of g.out.get(id) || []) {
+      const key = e.rel + '|' + e.t;
+      if (seen.has(key)) continue;
+      if (e.rel === 'READS_TABLE' || e.rel === 'WRITES_TABLE') {
+        seen.add(key);
+        tables.push({ table: e.t.replace(/^table:/, ''), access: e.rel === 'READS_TABLE' ? 'read' : 'write', via: id.split('#').pop(), confidence: e.conf || 'certain' });
+      } else if (e.rel === 'USES_CACHE') {
+        seen.add(key);
+        caches.push({ cache: e.t.replace(/^cache:/, ''), via: id.split('#').pop(), confidence: e.conf || 'certain' });
+      }
+    }
+  }
+  return { tables, caches };
+}
+
 function traceEndpoint(g, epId) {
   const ep = g.nodes.get(epId);
   if (!ep || ep.type !== 'endpoint') return { error: 'endpoint not found: ' + epId };
@@ -71,7 +90,13 @@ function traceEndpoint(g, epId) {
       });
     }
   }
-  return { endpoint: epId, path: ep.props?.path, providers, consumers, topics };
+  const dataIds = new Set();
+  for (const p of providers) {
+    dataIds.add(p.method);
+    for (const c of traverse(g, p.method, { depth: 3, forward: true })) dataIds.add(c.id);
+  }
+  const { tables, caches } = collectData(g, dataIds);
+  return { endpoint: epId, path: ep.props?.path, providers, consumers, topics, tables, caches };
 }
 function collectTopic(g, tid) {
   const t = g.nodes.get(tid);
@@ -110,6 +135,20 @@ function graphQuery(g, q) {
   for (const x of matches) {
     const n = retVar === va ? x.a : x.b;
     if (!seen.has(n.id)) { seen.add(n.id); uniq.push(n); }
+  }
+  if (!uniq.length) {
+    const rels = new Set();
+    for (const e of g.edges) {
+      const a = g.nodes.get(e.s), b = g.nodes.get(e.t);
+      if (!a || !b) continue;
+      const from = backward ? b : a, to = backward ? a : b;
+      if (from.type === wantA && (!wantB || to.type === wantB)) rels.add(e.rel);
+    }
+    return {
+      pattern: q.trim(), count: 0, results: [],
+      relationships: [...rels].slice(0, 20),
+      hint: 'single-hop only. Method→Table edges are READS_TABLE / WRITES_TABLE; for endpoint-level table usage call cross_repo_trace(endpoint) instead.',
+    };
   }
   if (isCount) return { pattern: q.trim(), count: uniq.length };
   return { pattern: q.trim(), count: uniq.length, results: uniq.slice(0, 20).map(n => ({ id: n.id, label: n.label, type: n.type, repo: n.repo })) };

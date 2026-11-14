@@ -278,6 +278,7 @@ test('MCP server: 9 tools, real answers over stdio-shaped transport', async () =
   const trace = await call('cross_repo_trace', { endpoint: 'ep:POST /inventory/deduct' });
   assert.ok(trace.providers.length >= 1, 'trace providers');
   assert.ok(trace.consumers.length >= 1, 'trace consumers');
+  assert.ok(Array.isArray(trace.tables) && Array.isArray(trace.caches), 'trace reports data-layer usage');
   assert.ok(trace.providers[0].file, 'providers carry source location');
   assert.ok(trace.providers[0].callees.every(c => c.file && c.line), 'callees carry source location');
   const fuzzy = await call('cross_repo_trace', { endpoint: 'POST /inventory/deduct' });

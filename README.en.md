@@ -152,7 +152,7 @@ codeloom serve [--port 3111] [--host 127.0.0.1]
 | `search_symbol` | Find methods / types / endpoints / topics / pages / tests by name, FQN or path |
 | `find_callers` / `find_callees` | Depth-limited call traversal with confidence filter |
 | `impact_analysis` | Changed method → entry points (HTTP, pages, MQ consumers, jobs, tests) |
-| `cross_repo_trace` | Providers / consumers / topics stitched around an endpoint, with docs and file:line |
+| `cross_repo_trace` | Providers / consumers / topics stitched around an endpoint, with docs, file:line, and the tables / caches read or written along the chain |
 | `graph_query` | Single-hop Cypher subset: `MATCH (a:Method)-[:CALLS]->(b) WHERE a.name='x' RETURN b` |
 | `impact_of_diff` | Unified diff (or commit in a local checkout) → batch impact per entry point |
 | `tests_for_change` | Precise test selection: unit tests + bridged API/UI cases + uncovered risk |

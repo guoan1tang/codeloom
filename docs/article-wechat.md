@@ -4,21 +4,20 @@
 > 1. 同一个问题，Claude Code 答不出来，接上这个 MCP 后答对了
 > 2. 我给编码 Agent 装了一张「代码地图」，实测数据都在这里
 
-先说一个我反复遇到的场景。
+事情的起点有点好笑：我订阅的 token 套餐快到期了，一看才用了 20%，想着「不能浪费」。于是给自己找了个理由——把额度用在一个真正值得做的东西上。
 
-订单服务要扣库存，代码在 `mall4cloud-order`；真正改库的实现在 `mall4cloud-product`，是另一个仓库。我让 Claude Code 回答一个问题：
+作为一个每天写业务的程序员，有两类问题反复出现：
 
-> 下单提交时订单服务调用 product 锁定库存，product 最终写入哪些数据库表？
+- 写技术方案时，要评估「改这里会影响哪些接口、哪些页面、哪些表」
+- 线上出故障时，要快速圈出「这个服务出问题，会波及哪些上游入口」
 
-它在我打开的 order 仓库里翻了一遍，最后很诚实地告诉我：**「product 服务的代码不在这个工作区，无法给出表名。」**
+这两件事本质是同一个问题：**影响范围**。但现实里，它靠的是老员工的记忆，或者一个人肉 grep 半小时。IDE 的调用查找只在单仓库里管用，跨服务靠 Feign、MQ 连起来的关系，它看不见。
 
-另一次它凭印象猜了两张表，漏掉了 `spu_extension`。
+市面上的图谱工具，要么要装 Neo4j、Docker，要么闭源、限制商用；而且大多是画给人看的，Agent 用不上。
 
-![同一道题的两种结果：只读源码 vs 接入 CodeLoom](article-assets/fig1.png)
+我想要的是另一种东西：**一个人类友好、Agent 也友好的代码知识图谱**。人能点开服务树、看见链路和注释；Agent 能通过 MCP 直接查调用链、影响面和测试清单。
 
-这不是模型不努力，是它手里只有「文件」，没有「关系」。
-
-所以我做了 **CodeLoom**：把代码仓库解析成方法级调用图，跨仓库把 Feign / HTTP / MQ 契约缝起来，再通过 **MCP** 交给编码 Agent。
+这就是 **CodeLoom**：tree-sitter 解析代码 → 本地 SQLite 图谱 → 同时提供 Web 界面和 MCP。对人和 Agent 来说，缺的都是同一样东西：不是文件，是文件之间的关系。
 
 ## 它到底有没有用，我做了对照实验
 
@@ -102,6 +101,18 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 
 ![跨仓库链路](article-assets/fig5-chain.png)
 
+## 变更影响：测试可以更精准
+
+图谱不只用来「看」。Web 里有一个「变更影响」视图：贴一段 git diff（或选一个本地提交），它会：
+
+1. 定位 diff 里改动的方法
+2. 反向追到所有入口：HTTP 接口、页面、MQ 消费方、Job
+3. 给出该跑的单测和回归用例，并标出**没有被任何测试覆盖**的改动
+
+对测试同学来说，这意味着不用「全量回归」，而是按影响面挑用例；对开发来说，提交前就能知道这次改动会惊动谁。
+
+![变更影响视图：从 diff 到入口和测试清单](article-assets/fig6-impact.png)
+
 Java 常见写法基本覆盖：`@RestController` / `@Controller`、Feign 接口 + implements 契约、Spring DI 分派、RabbitMQ / Kafka / RocketMQ、`@Scheduled` / `@XxlJob`、MyBatis XML / `@Select` / BaseMapper / 自定义 `BaseMapperX` / `ServiceImpl`、`lambdaQuery`、`@Cacheable` / Redis 键。连「把 Registry 传给分页工具类执行查询」这种委托写法，也能把表归属回调用方。
 
 ## 它做不到什么（请一定看）
@@ -134,7 +145,9 @@ Java 常见写法基本覆盖：`@RestController` / `@Controller`、Feign 接口
 
 ## 发布备注（不发布）
 
-- 配图：README 里的「服务树」「跨仓库链路」两张截图；数据表建议做成图片或卡片排版，直接粘 Markdown 表格在公众号编辑器里会散
+- 配图顺序：fig2 实测数据 → fig3 架构 → fig4 服务树 → fig5 跨仓库链路 → fig6 变更影响（待补）
+- **fig6 待你补**：把 Web「变更影响」视图截图保存为 `docs/article-assets/fig6-impact.png`，正文已按这个路径引用
+- 数据表已画进 fig2，正文里的 Markdown 表格在公众号里可删，避免重复
 - 评论区高频问题预案：
   - 「代码会不会上传？」→ 不会，本地 SQLite，索引在 `~/.codeloom/graph.db`
   - 「支持 Go / Python 吗？」→ 暂不支持，Java 优先，TypeScript 覆盖常用写法

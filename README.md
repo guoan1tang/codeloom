@@ -22,6 +22,12 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 
 Or install globally: `npm i -g codeloom-cli`.
 
+### Without npm (install straight from GitHub)
+
+
+
+This clones the repository and runs it through Node — no registry account needed.
+
 ## Web UI
 
 ```bash

@@ -102,6 +102,13 @@ export function deleteRepo(db, id) {
   db.prepare('DELETE FROM nodes WHERE repo=?').run(id);
   db.prepare('DELETE FROM files WHERE repo=?').run(id);
   db.prepare('DELETE FROM repos WHERE id=?').run(id);
+  // global join nodes (endpoint/topic/table/cache) can outlive their repo — external
+  // endpoints carry repo 'external', tables/caches carry '' — drop dangling edges first,
+  // then any global node left with no edges
+  db.prepare(`DELETE FROM edges
+    WHERE s NOT IN (SELECT id FROM nodes) OR t NOT IN (SELECT id FROM nodes)`).run();
+  db.prepare(`DELETE FROM nodes WHERE type IN ('endpoint','topic','table','cache')
+    AND NOT EXISTS (SELECT 1 FROM edges WHERE edges.s = nodes.id OR edges.t = nodes.id)`).run();
 }
 
 export function getGlobalConfig(db) {

@@ -836,12 +836,8 @@ table.rtable tbody tr:hover{background:var(--surface-2)}
   <div class="modal" role="dialog" aria-label="添加仓库">
     <div class="modal-head"><h2 id="add-modal-title">添加仓库</h2><button class="iconbtn" id="add-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="modal-body" id="add-form-body">
-      <div class="field"><label for="add-url">Git 仓库地址</label><input id="add-url" placeholder="https://git.internal.cn/team/service.git" autocomplete="off"><span class="hint">支持 HTTPS / SSH，私有仓库填写访问令牌</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field"><label for="add-branch">分支</label><input id="add-branch" value="main"></div>
-        <div class="field"><label for="add-lang">主语言</label><select id="add-lang"><option>Java</option><option>TypeScript</option><option>Python</option><option>Go</option></select></div>
-      </div>
-      <div class="field"><label for="add-token">访问令牌（可选）</label><input id="add-token" type="password" placeholder="仅存于本地，用于 clone 私有仓库"></div>
+      <div class="field"><label for="add-url">仓库地址 / 本地路径</label><input id="add-url" placeholder="https://git.internal.cn/team/service.git 或 /Users/you/code/service" autocomplete="off"><span class="hint">支持 Git 地址（HTTPS / SSH）或本机绝对路径；本地路径直接解析，不 clone、不改动仓库</span></div>
+      <div class="field"><label for="add-branch">分支（仅 Git 地址）</label><input id="add-branch" value="main"></div>
       <div class="form-err" id="add-err"></div>
       <button class="btn primary" id="add-submit" style="width:100%;padding:10px">开始接入并分析</button>
     </div>
@@ -2012,7 +2008,7 @@ function deleteRepos(ids){
 /* add repo flow — real server-side indexing */
 $('#repo-add-btn').addEventListener('click',()=>{
   $('#add-form-body').hidden=false; $('#add-progress-body').hidden=true;
-  $('#add-err').classList.remove('show'); $('#add-url').value=''; $('#add-token').value='';
+  $('#add-err').classList.remove('show'); $('#add-url').value='';
   $('#add-done').textContent='Done · view graph';
   $('#modal-add').hidden=false; $('#add-url').focus();
 });

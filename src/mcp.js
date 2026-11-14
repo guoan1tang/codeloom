@@ -28,6 +28,20 @@ function findMethod(g, idOrLabel) {
   return hits[0]?.id || null;
 }
 
+// Attach what the graph already stored about a method so agents can skip the
+// source read for "what does this hop do": Javadoc / @ApiOperation and location.
+function nodeBrief(g, id) {
+  const n = g.nodes.get(id);
+  if (!n) return {};
+  const out = {};
+  if (n.props?.doc) out.doc = n.props.doc;
+  if (n.props?.apidoc) out.apidoc = n.props.apidoc;
+  if (n.file) out.file = n.file;
+  if (n.start_line != null) out.line = n.start_line;
+  return out;
+}
+const withBrief = (g, results) => results.map(r => ({ ...r, ...nodeBrief(g, r.id) }));
+
 function traceEndpoint(g, epId) {
   const ep = g.nodes.get(epId);
   if (!ep || ep.type !== 'endpoint') return { error: 'endpoint not found: ' + epId };
@@ -35,12 +49,18 @@ function traceEndpoint(g, epId) {
   for (const e of g.inn.get(epId) || []) {
     if (e.rel === 'EXPOSES') {
       const m = g.nodes.get(e.s);
-      providers.push({ method: m.id, label: m.label, repo: m.repo, callees: traverse(g, m.id, { depth: 2, forward: true }).slice(0, 12) });
+      providers.push({
+        method: m.id, label: m.label, repo: m.repo, ...nodeBrief(g, m.id),
+        callees: withBrief(g, traverse(g, m.id, { depth: 2, forward: true }).slice(0, 12)),
+      });
       for (const out of g.out.get(m.id) || []) if (out.rel === 'PRODUCES') topics.push(collectTopic(g, out.t));
     }
     if (e.rel === 'CONSUMES' || e.rel === 'CALLS_API') {
       const m = g.nodes.get(e.s);
-      consumers.push({ method: m.id, label: m.label, repo: m.repo, client: e.rel, callers: traverse(g, m.id, { depth: 2 }).slice(0, 12) });
+      consumers.push({
+        method: m.id, label: m.label, repo: m.repo, client: e.rel, ...nodeBrief(g, m.id),
+        callers: withBrief(g, traverse(g, m.id, { depth: 2 }).slice(0, 12)),
+      });
     }
   }
   return { endpoint: epId, path: ep.props?.path, providers, consumers, topics };
@@ -109,7 +129,7 @@ export function createServer(dbPath = defaultDbPath()) {
     const g = G();
     const id = findMethod(g, method);
     if (!id) return json({ error: 'method not found: ' + method });
-    return json({ method: id, direction: 'callers', results: traverse(g, id, { depth: depth || 3, minConf: minConfidence || 'inferred' }) });
+    return json({ method: id, direction: 'callers', results: withBrief(g, traverse(g, id, { depth: depth || 3, minConf: minConfidence || 'inferred' })) });
   });
 
   server.registerTool('find_callees', {
@@ -119,7 +139,7 @@ export function createServer(dbPath = defaultDbPath()) {
     const g = G();
     const id = findMethod(g, method);
     if (!id) return json({ error: 'method not found: ' + method });
-    return json({ method: id, direction: 'callees', results: traverse(g, id, { depth: depth || 2, forward: true }) });
+    return json({ method: id, direction: 'callees', results: withBrief(g, traverse(g, id, { depth: depth || 2, forward: true })) });
   });
 
   server.registerTool('impact_analysis', {

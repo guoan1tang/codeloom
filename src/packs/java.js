@@ -445,6 +445,23 @@ export function pass2Types(ctx, file) {
     const tid = ctx.fqnIndex.get(fqn);
     if (tid) ctx.edge({ s: `${ctx.repo}#${file}`, t: tid, rel: 'IMPORTS', file });
   }
+  // convention fallback: a mapper/ServiceImpl bound to an entity without @TableName
+  // still implies the entity's table (bare names like UserPermission included)
+  if (ctx.config && ctx.config.tableNameFallback) {
+    const consider = (entName) => {
+      const entId = (ctx.typeIndex.get(entName) || [])[0];
+      if (!entId || ctx.entityTables.has(entId)) return;
+      const node = ctx.nodes.get(entId);
+      if (!node) return;
+      const table = String(node.label).replace(/(DO|Entity)$/, '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+      if (!table) return;
+      ctx.node({ id: 'table:' + table, type: 'table', label: table, props: { derived: true } });
+      ctx.entityTables.set(entId, table);
+    };
+    const prefix = `${ctx.repo}#${file}::`;
+    for (const [tid, ent] of ctx.mapperEntity) if (tid.startsWith(prefix)) consider(ent);
+    for (const [tid, ent] of ctx.implEntity) if (tid.startsWith(prefix)) consider(ent);
+  }
   // inheritance
   for (const r of ctx.typeRels.filter(r => r.file === file)) {
     if (r.superName) for (const t of resolveType(r.superName)) ctx.edge({ s: r.tid, t, rel: 'EXTENDS', file });

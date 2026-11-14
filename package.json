@@ -1,5 +1,5 @@
 {
-  "name": "codeloom",
+  "name": "codeloom-cli",
   "version": "0.1.0",
   "description": "Code knowledge graph for agents: method-level call graph + cross-repo contract stitching, MCP-native, zero native dependencies",
   "type": "module",
@@ -23,8 +23,10 @@
   },
   "files": [
     "src",
+    "web",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CONTRIBUTING.md"
   ],
   "keywords": [
     "knowledge-graph",
@@ -41,5 +43,8 @@
   "homepage": "https://github.com/guoan1tang/codeloom#readme",
   "bugs": {
     "url": "https://github.com/guoan1tang/codeloom/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

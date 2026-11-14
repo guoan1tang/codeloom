@@ -1,0 +1,29 @@
+name: Language / framework support
+description: Request a language pack or a framework convention (DI, ORM, MQ, jobs...)
+title: "[support] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Languages are added as **packs** (see CONTRIBUTING.md). Framework conventions can often
+        be handled by `codeloom.config.json` without code changes.
+  - type: input
+    id: language
+    attributes:
+      label: Language / framework
+      placeholder: e.g. Go + Gin, Python + Django, Kotlin + Spring
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Public example repository (optional)
+      description: A minimal repo that reproduces the structure helps us build a fixture.
+  - type: textarea
+    id: relations
+    attributes:
+      label: Which relationships must be extracted?
+      placeholder: calls, HTTP endpoints, MQ topics, DB tables, jobs, tests...
+    validations:
+      required: true

@@ -16,11 +16,11 @@ leaves your machine.
 Requires Node >= 22.13 and Git.
 
 ```bash
-npx codeloom analyze https://github.com/you/your-service.git   # or a local path
-claude mcp add codeloom -- npx -y codeloom mcp
+npx codeloom-cli analyze https://github.com/you/your-service.git   # or a local path
+claude mcp add codeloom -- npx -y codeloom-cli mcp
 ```
 
-Or install globally: `npm i -g codeloom`.
+Or install globally: `npm i -g codeloom-cli`.
 
 ## Web UI
 

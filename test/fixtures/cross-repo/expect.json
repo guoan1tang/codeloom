@@ -1,0 +1,21 @@
+{
+  "edges": [
+    { "s": "OrderController.create", "t": "ep:POST /orders", "rel": "EXPOSES" },
+    { "s": "OrderController.create", "t": "OrderService.createOrder", "rel": "CALLS", "conf": "certain" },
+    { "s": "OrderService.createOrder", "t": "InventoryApiClient.callDeduct", "rel": "CALLS", "conf": "certain" },
+    { "s": "InventoryApiClient.callDeduct", "t": "InventoryApi.deduct", "rel": "CALLS", "conf": "certain" },
+    { "s": "InventoryApi.deduct", "t": "ep:POST /inventory/deduct", "rel": "CONSUMES" },
+    { "s": "InventoryController.deduct", "t": "ep:POST /inventory/deduct", "rel": "EXPOSES" },
+    { "s": "InventoryController.deduct", "t": "InventoryService.deductStock", "rel": "CALLS", "conf": "certain" },
+    { "s": "OrderService.createOrder", "t": "topic:order-created", "rel": "PRODUCES" },
+    { "s": "RabbitOrderCreatedListener.onOrder", "t": "topic:order-created", "rel": "SUBSCRIBES" },
+    { "s": "submitOrder", "t": "ep:POST /orders", "rel": "CALLS_API" },
+    { "s": "page:web-frontend:/order/confirm", "t": "submitOrder", "rel": "CONTAINS" }
+  ],
+  "nodes": [
+    { "id": "GatewayRouteConfig.orderRoute", "type": "method" },
+    { "id": "ep:POST /orders", "props": { "repo": "order-service" } },
+    { "id": "ep:POST /inventory/deduct", "props": { "repo": "inventory-service" } }
+  ],
+  "summary": { "repos": 4, "endpoints": 2, "topics": 1 }
+}

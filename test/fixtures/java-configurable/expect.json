@@ -1,0 +1,14 @@
+{
+  "edges": [
+    { "s": "WidgetService.find", "t": "table:t_widget", "rel": "READS_TABLE" },
+    { "s": "WidgetService.save", "t": "table:t_widget", "rel": "WRITES_TABLE" },
+    { "s": "CustomListener.handle", "t": "topic:widget-queue", "rel": "SUBSCRIBES" },
+    { "s": "InventoryFeign.ping", "t": "ep:POST /inventory/ping", "rel": "CONSUMES" }
+  ],
+  "nodes": [
+    { "id": "WidgetJob.refresh", "props": { "entry": "job", "jobHandler": "widget-refresh" } },
+    { "id": "CustomListener.handle", "props": { "entry": "mq" } },
+    { "id": "WidgetEntity", "type": "type" }
+  ],
+  "summary": { "repos": 1, "job": 1, "mq": 1, "tables": 1, "endpoints": 1 }
+}

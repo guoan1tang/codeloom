@@ -1,0 +1,12 @@
+{
+  "noOutgoing": [
+    { "s": "DynamicMapper.selectByTable", "rel": "READS_TABLE" },
+    { "s": "Reflector.make", "rel": "CALLS" },
+    { "s": "FakeControllerApi.fake", "rel": "EXPOSES" }
+  ],
+  "noNodes": ["Inner", "Person"],
+  "nodes": [
+    { "id": "QuartzJob.execute", "props": { "entry": "" } },
+    { "id": "Outer", "type": "type" }
+  ]
+}

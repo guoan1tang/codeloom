@@ -1,0 +1,11 @@
+{
+  "edges": [
+    { "s": "A.a", "t": "B.b", "rel": "CALLS", "conf": "certain" },
+    { "s": "B.b", "t": "A.a", "rel": "CALLS", "conf": "certain" },
+    { "s": "Caller.run", "t": "Calc.add", "rel": "CALLS", "conf": "certain" }
+  ],
+  "nodes": [
+    { "id": "PlainThing.create", "props": { "entry": "" } },
+    { "id": "Good", "type": "type" }
+  ]
+}

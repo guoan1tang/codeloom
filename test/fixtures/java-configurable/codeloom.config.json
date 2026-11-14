@@ -1,0 +1,6 @@
+{
+  "jobAnnotations": ["OurJob"],
+  "mqListenerAnnotations": ["OurMq"],
+  "tableAnnotations": ["OurTable"],
+  "gatewayRouters": [{ "prefix": "/bff", "strip": 1 }]
+}

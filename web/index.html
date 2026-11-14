@@ -1,0 +1,2596 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>CodeLoom 代码知识图谱</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='8' fill='%23121722'/%3E%3Cpath d='M9 21L16 10L23 21' stroke='%234D9FFF' stroke-width='2' fill='none'/%3E%3Ccircle cx='16' cy='10' r='3' fill='%2357D9A3'/%3E%3Ccircle cx='9' cy='21' r='3' fill='%23FFB454'/%3E%3Ccircle cx='23' cy='21' r='3' fill='%23B48CFF'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============ CodeLoom · 代码知识图谱原型 ============
+   Layout: fixed topnav + full-height view workspace + statusbar;
+   graph explorer = sidebar(filters+console) / canvas / detail drawer.
+   Palette: node taxonomy IS the palette — blue(type) mint(method)
+   magenta(endpoint) amber(topic) violet(page) steel(repo), ink-blue ground. */
+:root{
+  color-scheme: dark;
+  --bg:#0B0E14; --bg-soft:#0D1119; --surface:#121722; --surface-2:#171E2C; --overlay:#1D2536;
+  --border:#243049; --border-soft:#1B2334;
+  --fg:#E9EDF6; --fg-muted:#9AA5BC; --fg-faint:#5F6B85;
+  --accent:#4D9FFF; --accent-soft:rgba(77,159,255,.14);
+  --mint:#57D9A3; --magenta:#FF5C8A; --amber:#FFB454; --violet:#B48CFF;
+  --steel:#8593AE; --cyan:#4CC9E0; --orange:#FF9F68; --lime:#A8E05F;
+  --success:#57D9A3; --warning:#FFB454; --danger:#FF6B6B; --info:#4D9FFF;
+  --edge-call:#7189B8; --edge-struct:#3A4763; --edge-impl:#4CC9E0;
+  --repo-web:#B48CFF; --repo-gateway:#4CC9E0; --repo-order:#4D9FFF; --repo-inventory:#57D9A3;
+  --repo-customer:#FFB454; --repo-settlement:#FF5C8A; --repo-notification:#FF9F68; --repo-common:#8593AE;
+  --scrim:rgba(5,8,14,.66); --shadow:0 14px 44px rgba(0,0,0,.5);
+  --font-display:'Space Grotesk','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,'PingFang SC',monospace;
+  --nav-h:56px; --status-h:30px; --radius:10px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme: light;
+    --bg:#EFF3F9; --bg-soft:#E9EEF6; --surface:#FFFFFF; --surface-2:#F4F7FC; --overlay:#FFFFFF;
+    --border:#D4DDEB; --border-soft:#E2E9F3;
+    --fg:#182234; --fg-muted:#54627E; --fg-faint:#8B97AE;
+    --accent:#2B7CD9; --accent-soft:rgba(43,124,217,.12);
+    --mint:#149A6C; --magenta:#D93A6E; --amber:#BE7A0E; --violet:#7C4FD0;
+    --steel:#5E7091; --cyan:#0F87A0; --orange:#D97A3D; --lime:#5F9E14;
+    --success:#149A6C; --warning:#BE7A0E; --danger:#D64545; --info:#2B7CD9;
+    --edge-call:#7286A8; --edge-struct:#C3CEDF; --edge-impl:#0F87A0;
+    --repo-web:#7C4FD0; --repo-gateway:#0F87A0; --repo-order:#2B7CD9; --repo-inventory:#149A6C;
+    --repo-customer:#BE7A0E; --repo-settlement:#D93A6E; --repo-notification:#D97A3D; --repo-common:#5E7091;
+    --scrim:rgba(24,34,52,.34); --shadow:0 14px 40px rgba(24,34,52,.16);
+  }
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#EFF3F9; --bg-soft:#E9EEF6; --surface:#FFFFFF; --surface-2:#F4F7FC; --overlay:#FFFFFF;
+  --border:#D4DDEB; --border-soft:#E2E9F3;
+  --fg:#182234; --fg-muted:#54627E; --fg-faint:#8B97AE;
+  --accent:#2B7CD9; --accent-soft:rgba(43,124,217,.12);
+  --mint:#149A6C; --magenta:#D93A6E; --amber:#BE7A0E; --violet:#7C4FD0;
+  --steel:#5E7091; --cyan:#0F87A0; --orange:#D97A3D; --lime:#5F9E14;
+  --success:#149A6C; --warning:#BE7A0E; --danger:#D64545; --info:#2B7CD9;
+  --edge-call:#7286A8; --edge-struct:#C3CEDF; --edge-impl:#0F87A0;
+  --repo-web:#7C4FD0; --repo-gateway:#0F87A0; --repo-order:#2B7CD9; --repo-inventory:#149A6C;
+  --repo-customer:#BE7A0E; --repo-settlement:#D93A6E; --repo-notification:#D97A3D; --repo-common:#5E7091;
+  --scrim:rgba(24,34,52,.34); --shadow:0 14px 40px rgba(24,34,52,.16);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-size:14px; line-height:1.55;
+  display:flex; flex-direction:column; overflow:hidden;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); background:var(--surface); z-index:60}
+::selection{background:var(--accent-soft)}
+*{scrollbar-width:thin; scrollbar-color:var(--border) transparent}
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;border:2px solid var(--bg)}
+*::-webkit-scrollbar-thumb:hover{background:var(--fg-faint)}
+button{font-family:inherit;color:inherit}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--fg);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;outline:none;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input::placeholder,textarea::placeholder{color:var(--fg-faint)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+.mono{font-family:var(--font-mono)}
+.muted{color:var(--fg-muted)} .faint{color:var(--fg-faint)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- topnav ---------- */
+.topnav{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:50; flex:none;
+  display:flex; align-items:center; gap:14px; height:var(--nav-h);
+  margin-left:-16px; margin-right:-16px; padding:0 max(16px, env(safe-area-inset-left,0px)) 0 max(16px, env(safe-area-inset-right,0px));
+  background:color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--border-soft);
+}
+.brand{display:flex;align-items:center;gap:9px;flex:none}
+.brand-mark{width:30px;height:30px;flex:none}
+.brand-name{font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:.2px}
+.brand-sub{font-size:11px;color:var(--fg-faint);letter-spacing:.6px;margin-top:-2px}
+.navtabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.navtabs::-webkit-scrollbar{display:none}
+.navtab{
+  display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;border:1px solid transparent;
+  background:none;cursor:pointer;color:var(--fg-muted);font-size:13px;white-space:nowrap;transition:color .15s,background .15s;
+}
+.navtab svg{width:15px;height:15px;flex:none}
+.navtab:hover{color:var(--fg);background:var(--surface-2)}
+.navtab.active{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex:none}
+.gsearch{position:relative}
+.gsearch input{width:190px;padding-left:30px;background:var(--bg-soft)}
+.gsearch>svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--fg-faint);pointer-events:none}
+.gsearch-results{
+  position:absolute;top:calc(100% + 6px);right:0;width:320px;max-height:340px;overflow-y:auto;
+  background:var(--overlay);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);z-index:80;padding:5px;
+}
+.gsr-item{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border:0;border-radius:7px;background:none;cursor:pointer;text-align:left;font-size:12.5px}
+.gsr-item:hover{background:var(--surface-2)}
+.gsr-item .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.gsr-item .repo{margin-left:auto;color:var(--fg-faint);font-size:11px;font-family:var(--font-mono)}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);cursor:pointer;color:var(--fg-muted);transition:all .15s;flex:none}
+.iconbtn:hover{color:var(--fg);border-color:var(--fg-faint)}
+.iconbtn svg{width:15px;height:15px}
+.proto-badge{font-size:10.5px;font-family:var(--font-mono);color:var(--amber);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);background:color-mix(in srgb,var(--amber) 10%,transparent);padding:2px 8px;border-radius:20px;letter-spacing:.5px;flex:none}
+
+/* ---------- workspace ---------- */
+.workspace{flex:1;min-height:0;position:relative;margin-left:-16px;margin-right:-16px;overflow:hidden}
+.view{position:absolute;inset:0;display:flex;min-height:0}
+.view[hidden]{display:none}
+.view-scroll{overflow-y:auto;overflow-x:hidden;width:100%;padding:22px max(16px,env(safe-area-inset-right,0px)) 30px max(16px,env(safe-area-inset-left,0px))}
+.view-head{max-width:1240px;margin:0 auto 18px}
+.view-head h1{font-size:21px;font-weight:700;display:flex;align-items:center;gap:10px}
+.view-head p{margin:5px 0 0;color:var(--fg-muted);font-size:13px;max-width:720px}
+.view-body{max-width:1240px;margin:0 auto}
+
+/* ---------- graph view ---------- */
+#view-graph{flex-direction:row}
+.gsidebar{
+  width:264px;flex:none;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border-soft);
+  padding:14px 14px 20px;display:flex;flex-direction:column;gap:16px;
+}
+.gside-sec{display:flex;flex-direction:column;gap:8px}
+.gside-title{font-size:10.5px;font-weight:600;letter-spacing:1.2px;color:var(--fg-faint);text-transform:uppercase;font-family:var(--font-display);display:flex;align-items:center;justify-content:space-between}
+.legend-item{display:flex;align-items:center;gap:8px;padding:4px 7px;border-radius:7px;cursor:pointer;border:1px solid transparent;background:none;width:100%;font-size:12.5px;color:var(--fg);transition:background .12s}
+.legend-item:hover{background:var(--surface-2)}
+.legend-item.off{opacity:.38}
+.legend-item .swatch{width:11px;height:11px;flex:none;border-radius:3px}
+.legend-item .cnt{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--fg-faint)}
+.chiprow{display:flex;flex-wrap:wrap;gap:5px}
+.fchip{font-size:11px;font-family:var(--font-mono);padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--fg-muted);cursor:pointer;transition:all .12s}
+.fchip.on{color:var(--fg);border-color:color-mix(in srgb,var(--accent) 45%,transparent);background:var(--accent-soft)}
+.fchip:hover{border-color:var(--fg-faint)}
+.checkline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--fg-muted);cursor:pointer}
+.checkline input{accent-color:var(--accent);width:14px;height:14px;margin:0}
+.repo-line{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;cursor:pointer;color:var(--fg-muted)}
+.repo-line input{accent-color:var(--accent);margin:0;width:13px;height:13px}
+.repo-line .rdot{width:8px;height:8px;border-radius:50%;flex:none}
+.repo-line .rname{font-family:var(--font-mono);font-size:11.5px;color:var(--fg)}
+/* control console */
+.console{background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px}
+.ctl{display:flex;flex-direction:column;gap:3px}
+.ctl label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--fg-muted)}
+.ctl label output{font-family:var(--font-mono);color:var(--accent);font-size:11px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:var(--border);border:0;padding:0;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--accent);transition:transform .12s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+.switchrow{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--fg-muted)}
+.switch{position:relative;width:32px;height:18px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:2}
+.switch .track{position:absolute;inset:0;border-radius:20px;background:var(--border);transition:background .15s}
+.switch .track::after{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--fg-muted);transition:all .15s}
+.switch input:checked+.track{background:var(--accent)}
+.switch input:checked+.track::after{left:17px;background:#fff}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 14px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--fg);font-size:12.5px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--fg-faint);background:var(--overlay)}
+.btn svg{width:14px;height:14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.12)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.btn.danger:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.btn.sm{padding:4px 10px;font-size:11.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.savedview{display:flex;align-items:center;gap:6px}
+.sv-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 6px 3px 9px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);color:var(--fg-muted)}
+.sv-chip button{border:0;background:none;color:var(--fg-faint);cursor:pointer;padding:0 2px;font-size:12px}
+.sv-chip button:hover{color:var(--danger)}
+.sv-chip .sv-name{cursor:pointer}
+.sv-chip .sv-name:hover{color:var(--accent)}
+/* canvas area */
+.gmain{flex:1;min-width:0;position:relative;background:var(--bg)}
+#graph-canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+#graph-canvas.dragging{cursor:grabbing}
+.goverlay-tl{position:absolute;top:12px;left:12px;display:flex;gap:8px;align-items:center;z-index:5;flex-wrap:wrap;max-width:calc(100% - 24px)}
+.goverlay-tr{position:absolute;top:12px;right:12px;z-index:5;display:flex;gap:8px}
+.minimap-wrap{position:absolute;right:12px;bottom:12px;z-index:5;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--border);border-radius:9px;overflow:hidden;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+#minimap{display:block;width:168px;height:112px;cursor:crosshair}
+@media (max-width:560px){.minimap-wrap{display:none}}
+.hud{font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--border-soft);border-radius:8px;padding:5px 10px;backdrop-filter:blur(8px)}
+.hud-select{font-family:var(--font-mono);font-size:11.5px;font-weight:600;color:var(--fg);background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--accent);border-radius:8px;padding:5px 10px;backdrop-filter:blur(8px);cursor:pointer;max-width:220px}
+.hud-select:hover{box-shadow:0 0 0 3px var(--accent-soft)}
+.hl-banner{display:none;align-items:center;gap:8px;font-size:12px;background:color-mix(in srgb,var(--amber) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);color:var(--fg);border-radius:8px;padding:5px 10px;backdrop-filter:blur(8px)}
+.hl-banner.show{display:flex}
+.hl-banner button{border:0;background:none;color:var(--amber);cursor:pointer;font-size:12px;text-decoration:underline}
+.gtooltip{
+  position:absolute;z-index:9;pointer-events:none;max-width:280px;display:none;
+  background:var(--overlay);border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow);padding:9px 12px;font-size:12px;
+}
+.gtooltip .tt-label{font-family:var(--font-mono);font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px}
+.gtooltip .tt-meta{color:var(--fg-muted);font-size:11px;margin-top:3px}
+.gtooltip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.mobile-side-toggle{display:none}
+/* ---------- tree view (default) ---------- */
+.gviewbar{position:absolute;top:12px;left:12px;right:12px;z-index:7;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);flex:none}
+.seg-btn{border:0;background:none;padding:6px 13px;font-size:12px;color:var(--fg-muted);cursor:pointer}
+.seg-btn.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tree-wrap{position:absolute;inset:0;z-index:6;background:var(--bg);display:flex;flex-direction:column;padding-top:54px}
+#view-graph.mode-tree .tree-wrap{display:flex}
+#view-graph.mode-tree .gsidebar{display:none}
+#view-graph.mode-tree .goverlay-tr,#view-graph.mode-tree .minimap-wrap{display:none}
+#view-graph.mode-tree .gtooltip{display:none!important}
+.tree-tools{display:flex;align-items:center;gap:12px;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--border-soft);flex:none;flex-wrap:wrap}
+.tree-tools input{flex:1;max-width:420px;background:var(--surface)}
+#tree-body{flex:1;overflow:auto;padding:10px 14px 48px}
+.tree-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;cursor:pointer;font-size:12.5px;user-select:none}
+.tree-row:hover{background:var(--surface-2)}
+.tree-row.lvl0{font-weight:600;font-size:13.5px}
+.tree-row .caret{width:12px;color:var(--fg-faint);font-size:10px;flex:none;transition:transform .12s;text-align:center}
+.tree-row.open>.caret{transform:rotate(90deg)}
+.tree-row .t-label{font-family:var(--font-mono);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-row .t-meta{margin-left:auto;color:var(--fg-faint);font-size:11px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:none}
+.tree-row .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.tree-row .jump{margin-left:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--accent);cursor:pointer;font-size:10.5px;padding:1px 7px;border-radius:5px;opacity:0;flex:none}
+.tree-row:hover .jump{opacity:1}
+.tree-children{padding-left:16px;margin-left:14px;border-left:1px solid var(--border-soft);display:none}
+.tree-children.open{display:block}
+.tree-empty{color:var(--fg-faint);font-size:12px;padding:4px 10px 4px 26px;font-style:italic}
+.tree-row.flash{background:var(--accent-soft)}
+.link-btn{border:1px solid var(--border);background:var(--surface-2);color:var(--accent);font-size:10.5px;padding:1px 7px;border-radius:5px;cursor:pointer;opacity:0;flex:none}
+.tree-row:hover .link-btn{opacity:1}
+.modal.wide{width:min(1180px,96vw)}
+#modal-trace .trace-wrap{max-height:58vh;overflow:auto}
+#trace-title{word-break:break-all}
+.doc-block{font-size:12px;line-height:1.7;color:var(--fg-muted);background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;white-space:pre-wrap}
+.doc-api{color:var(--violet);font-weight:600;margin-bottom:4px}
+.tree-chip{font-size:10.5px;font-family:var(--font-mono);padding:1px 7px;border-radius:5px;border:1px solid var(--border);color:var(--fg-muted);background:var(--surface-2)}
+/* ---------- drawer ---------- */
+.drawer{
+  position:absolute;top:0;right:0;bottom:0;width:390px;max-width:100%;z-index:30;
+  background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);
+  transform:translateX(102%);transition:transform .26s cubic-bezier(.3,.9,.3,1);
+  display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:16px 18px 12px;border-bottom:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px;flex:none}
+.drawer-head .top{display:flex;align-items:flex-start;gap:10px}
+.drawer-head h2{font-size:16px;font-family:var(--font-mono);font-weight:600;word-break:break-all;flex:1;min-width:0}
+.drawer-body{overflow-y:auto;padding:14px 18px 24px;display:flex;flex-direction:column;gap:16px;flex:1}
+.type-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-family:var(--font-mono);letter-spacing:.6px;padding:2px 9px;border-radius:20px;border:1px solid;text-transform:uppercase;flex:none}
+.kv{display:grid;grid-template-columns:88px 1fr;gap:5px 10px;font-size:12.5px}
+.kv dt{color:var(--fg-faint)}
+.kv dd{margin:0;font-family:var(--font-mono);font-size:12px;word-break:break-all}
+.codeblock{background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:9px;overflow:hidden}
+.codeblock .cb-head{display:flex;justify-content:space-between;padding:6px 12px;font-size:10.5px;font-family:var(--font-mono);color:var(--fg-faint);border-bottom:1px solid var(--border-soft)}
+.codeblock pre{margin:0;padding:11px 12px;overflow-x:auto;font-family:var(--font-mono);font-size:11.5px;line-height:1.6}
+.tok-k{color:var(--violet)} .tok-s{color:var(--mint)} .tok-a{color:var(--amber)} .tok-c{color:var(--fg-faint);font-style:italic} .tok-n{color:var(--cyan)}
+.edge-group{display:flex;flex-direction:column;gap:4px}
+.edge-group h3{font-size:11px;letter-spacing:1px;color:var(--fg-faint);text-transform:uppercase;font-family:var(--font-display);margin-bottom:3px}
+.edge-item{display:flex;align-items:center;gap:8px;width:100%;padding:6px 9px;border-radius:7px;border:1px solid var(--border-soft);background:var(--bg-soft);cursor:pointer;font-size:12px;text-align:left;transition:border-color .12s}
+.edge-item:hover{border-color:var(--accent)}
+.edge-item .rel{font-family:var(--font-mono);font-size:9.5px;padding:1px 6px;border-radius:4px;flex:none;letter-spacing:.4px}
+.edge-item .ename{font-family:var(--font-mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.edge-item .erepo{margin-left:auto;color:var(--fg-faint);font-size:10px;font-family:var(--font-mono);flex:none}
+.conf-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.drawer-actions{display:flex;gap:8px;flex-wrap:wrap}
+.sec-label{font-size:11px;letter-spacing:1px;color:var(--fg-faint);text-transform:uppercase;font-family:var(--font-display)}
+
+/* ---------- cards / tiles ---------- */
+.card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tc,var(--accent))}
+.tile .t-val{font-family:var(--font-display);font-size:27px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .t-label{font-size:11.5px;color:var(--fg-muted);margin-top:2px}
+.tile .t-sub{font-size:10.5px;color:var(--fg-faint);font-family:var(--font-mono);margin-top:4px}
+
+/* ---------- impact ---------- */
+.impact-grid{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+.impact-form{display:flex;flex-direction:column;gap:13px;position:sticky;top:0}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label{font-size:11.5px;color:var(--fg-muted);font-weight:600}
+.field select,.field input:not([type=checkbox]):not([type=range]){width:100%}
+.field input[type=range]{width:100%}
+.field .hint{font-size:10.5px;color:var(--fg-faint)}
+.runsteps{display:flex;flex-direction:column;gap:9px;margin:14px 0}
+.runstep{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--fg-faint)}
+.runstep .rs-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex:none;display:flex;align-items:center;justify-content:center;font-size:10px}
+.runstep.active{color:var(--fg)}
+.runstep.active .rs-dot{border-color:var(--accent);animation:spin 1s linear infinite;border-top-color:transparent}
+.runstep.done{color:var(--fg-muted)}
+.runstep.done .rs-dot{border-color:var(--mint);background:var(--mint);color:#08110d}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progressbar{height:4px;border-radius:4px;background:var(--border);overflow:hidden;margin-top:6px}
+.progressbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--mint));transition:width .3s}
+.pathcard{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;gap:9px;animation:rise .35s both}
+.pathcard:nth-child(2){animation-delay:.05s}.pathcard:nth-child(3){animation-delay:.1s}.pathcard:nth-child(4){animation-delay:.15s}.pathcard:nth-child(5){animation-delay:.2s}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.path-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.entry-badge{font-size:10.5px;font-family:var(--font-mono);padding:2px 9px;border-radius:5px;letter-spacing:.4px;border:1px solid}
+.path-chain{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.pnode{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;padding:4px 9px;border-radius:7px;background:var(--bg-soft);border:1px solid var(--border-soft);cursor:pointer;transition:border-color .12s;max-width:100%}
+.pnode:hover{border-color:var(--accent)}
+.pnode .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.pnode .pr{color:var(--fg-faint);font-size:9.5px}
+.pnode.changed{border-color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--fg)}
+.parrow{color:var(--fg-faint);font-size:11px;flex:none}
+.path-note{font-size:11px;color:var(--fg-faint)}
+.empty-state{border:1px dashed var(--border);border-radius:var(--radius);padding:44px 24px;text-align:center;color:var(--fg-muted)}
+.empty-state svg{width:38px;height:38px;color:var(--fg-faint);margin-bottom:10px}
+.empty-state h3{font-size:15px;color:var(--fg);margin-bottom:5px}
+.empty-state p{font-size:12.5px;margin:0 auto;max-width:420px}
+
+/* ---------- trace ---------- */
+.scen-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.scen-tab{padding:8px 16px;border-radius:9px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;color:var(--fg-muted);transition:all .15s;display:flex;align-items:center;gap:8px}
+.scen-tab:hover{color:var(--fg)}
+.scen-tab.active{color:var(--fg);border-color:var(--accent);background:var(--accent-soft)}
+.scen-tab .st-idx{font-family:var(--font-mono);font-size:10px;color:var(--fg-faint)}
+.trace-wrap{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);overflow-x:auto;position:relative}
+.trace-svg{display:block;min-width:100%}
+.lane-band{fill:var(--bg-soft)}
+.lane-band.alt{fill:var(--surface-2)}
+.lane-label{font-family:var(--font-mono);font-size:11px;fill:var(--fg-muted)}
+.lane-repo-dot{}
+.tedge{fill:none;stroke-width:1.6;opacity:.55}
+.tedge.flow{stroke-dasharray:7 5;animation:dashflow 1.1s linear infinite}
+@keyframes dashflow{to{stroke-dashoffset:-12}}
+.tedge.lit{opacity:1;stroke-width:2.4}
+.tnode{cursor:pointer}
+.tnode circle,.tnode rect,.tnode path{transition:filter .15s}
+.tnode:hover .tn-shape{filter:brightness(1.25)}
+.tnode text{font-family:var(--font-mono);font-size:10px;fill:var(--fg)}
+.tnode .tn-sub{font-size:8.5px;fill:var(--fg-faint)}
+.tnode.dim{opacity:.28}
+.tnode.lit .tn-shape{filter:drop-shadow(0 0 7px currentColor)}
+.trace-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:13px}
+.trace-caption{flex:1;min-width:220px;font-size:12.5px;color:var(--fg-muted);background:var(--surface);border:1px solid var(--border-soft);border-radius:9px;padding:9px 14px}
+.trace-caption b{color:var(--fg);font-family:var(--font-mono);font-size:12px}
+.trace-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--fg-muted)}
+.trace-legend span{display:inline-flex;align-items:center;gap:6px}
+.trace-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* ---------- repos ---------- */
+.repo-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.repo-toolbar input[type=search]{width:240px}
+.table-wrap{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);overflow-x:auto}
+table.repos{width:100%;border-collapse:collapse;font-size:12.5px;min-width:940px}
+table.repos th{
+  text-align:left;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--fg-faint);
+  font-family:var(--font-display);padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap;user-select:none;
+}
+table.repos th.sortable{cursor:pointer}
+table.repos th.sortable:hover{color:var(--fg-muted)}
+table.repos th .sort-arrow{font-size:9px;margin-left:3px}
+table.repos td{padding:11px 14px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+table.repos tr:last-child td{border-bottom:0}
+table.repos tbody tr{transition:background .12s}
+table.repos tbody tr:hover{background:var(--surface-2)}
+table.repos tbody tr.selected{background:var(--accent-soft)}
+.repo-cell{display:flex;align-items:center;gap:10px}
+.repo-avatar{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:13px;color:#fff;flex:none}
+.repo-cell .rc-name{font-family:var(--font-mono);font-weight:600;font-size:12.5px}
+.repo-cell .rc-url{font-size:10.5px;color:var(--fg-faint);font-family:var(--font-mono);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.langchip{font-size:10px;font-family:var(--font-mono);padding:2px 7px;border-radius:5px;background:var(--surface-2);border:1px solid var(--border);color:var(--fg-muted)}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid;white-space:nowrap}
+.status-pill i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.status-pill.indexed{color:var(--success);border-color:color-mix(in srgb,var(--success) 40%,transparent);background:color-mix(in srgb,var(--success) 9%,transparent)}
+.status-pill.indexed i{background:var(--success)}
+.status-pill.stale{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 40%,transparent);background:color-mix(in srgb,var(--warning) 9%,transparent)}
+.status-pill.stale i{background:var(--warning)}
+.status-pill.indexing{color:var(--info);border-color:color-mix(in srgb,var(--info) 40%,transparent);background:color-mix(in srgb,var(--info) 9%,transparent)}
+.status-pill.indexing i{background:var(--info);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.row-actions{display:flex;gap:6px}
+.cfg-row{display:flex;align-items:center;gap:8px}
+.cfg-row .iconbtn{width:28px;height:28px}
+.bulkbar{display:none;align-items:center;gap:10px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:9px;padding:8px 14px;margin-bottom:12px;font-size:12.5px}
+.bulkbar.show{display:flex}
+input[type=checkbox].rowcheck{accent-color:var(--accent);width:14px;height:14px;margin:0;cursor:pointer}
+
+/* ---------- modal ---------- */
+.modal-scrim{position:fixed;inset:0;background:var(--scrim);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-scrim[hidden]{display:none}
+.modal{background:var(--overlay);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);width:560px;max-width:100%;max-height:88vh;overflow-y:auto;animation:pop .22s cubic-bezier(.3,1.2,.4,1)}
+@keyframes pop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 13px;border-bottom:1px solid var(--border-soft)}
+.modal-head h2{font-size:16px}
+.modal-body{padding:18px 20px 22px;display:flex;flex-direction:column;gap:14px}
+.form-err{color:var(--danger);font-size:12px;display:none}
+.form-err.show{display:block}
+.terminal{background:#0a0d13;border:1px solid #1d2536;border-radius:9px;padding:13px 15px;font-family:var(--font-mono);font-size:11.5px;line-height:1.85;color:#9AA5BC;max-height:280px;overflow-y:auto}
+.terminal .tl-time{color:#5F6B85}
+.terminal .tl-ok{color:#57D9A3}
+.terminal .tl-info{color:#4D9FFF}
+.terminal .tl-warn{color:#FFB454}
+.export-img{width:100%;border-radius:9px;border:1px solid var(--border);background:var(--bg)}
+
+/* ---------- mcp ---------- */
+.mcp-grid{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start}
+.mcp-left{display:flex;flex-direction:column;gap:14px}
+.server-card{display:flex;flex-direction:column;gap:11px}
+.server-status{display:flex;align-items:center;gap:9px;font-size:13px}
+.pulse-dot{width:9px;height:9px;border-radius:50%;background:var(--success);position:relative;flex:none}
+.pulse-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--success);animation:pulse 1.8s infinite}
+@keyframes pulse{from{transform:scale(.6);opacity:1}to{transform:scale(1.5);opacity:0}}
+.snippet{position:relative;background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:9px;padding:11px 40px 11px 13px;font-family:var(--font-mono);font-size:11.5px;line-height:1.7;overflow-x:auto;color:var(--fg-muted);white-space:pre}
+.snippet .copybtn{position:absolute;top:7px;right:7px}
+.tool-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid transparent;background:none;cursor:pointer;text-align:left;transition:all .12s}
+.tool-item:hover{background:var(--surface-2)}
+.tool-item.active{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.tool-item .ti-name{font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--fg)}
+.tool-item .ti-desc{font-size:11px;color:var(--fg-muted)}
+.tool-item .ti-icon{width:28px;height:28px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;flex:none;color:var(--accent)}
+.tool-item .ti-icon svg{width:14px;height:14px}
+.console-card{display:flex;flex-direction:column;gap:13px}
+.console-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.console-head select{min-width:190px}
+.param-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.resp-meta{display:flex;align-items:center;gap:12px;font-size:11px;font-family:var(--font-mono);color:var(--fg-faint)}
+.resp-meta .ok{color:var(--success)}
+.jsonview{background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:9px;padding:13px 15px;font-family:var(--font-mono);font-size:11.5px;line-height:1.7;overflow:auto;max-height:430px;white-space:pre;color:var(--fg-muted)}
+.j-key{color:var(--accent)} .j-str{color:var(--mint)} .j-num{color:var(--amber)} .j-bool{color:var(--magenta)}
+.example-chips{display:flex;gap:6px;flex-wrap:wrap}
+.hist-item{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;cursor:pointer;font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);text-align:left}
+.hist-item:hover{background:var(--surface-2);color:var(--fg)}
+.hist-item .h-ms{margin-left:auto;color:var(--fg-faint)}
+
+/* ---------- statusbar / toast ---------- */
+.statusbar{
+  flex:none;height:var(--status-h);display:flex;align-items:center;gap:16px;
+  margin-left:-16px;margin-right:-16px;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));
+  background:var(--surface);border-top:1px solid var(--border-soft);
+  font-family:var(--font-mono);font-size:10.5px;color:var(--fg-faint);
+  padding-bottom:env(safe-area-inset-bottom,0px);height:calc(var(--status-h) + env(safe-area-inset-bottom,0px));
+}
+.statusbar .sb-stats{margin-left:auto;display:flex;gap:14px}
+.statusbar b{color:var(--fg-muted);font-weight:500}
+.toasts{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(var(--status-h) + 16px + env(safe-area-inset-bottom,0px));z-index:120;display:flex;flex-direction:column;gap:9px;max-width:min(380px,calc(100vw - 36px))}
+.toast{display:flex;align-items:center;gap:10px;background:var(--overlay);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:11px 15px;font-size:12.5px;animation:toastin .25s cubic-bezier(.3,1.2,.4,1)}
+.toast.out{animation:toastout .25s forwards}
+@keyframes toastin{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateX(24px)}}
+.toast .t-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.toast button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:600;flex:none}
+.toast button:hover{text-decoration:underline}
+
+/* ---------- agent loop ---------- */
+.agent-grid{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+.agent-form{display:flex;flex-direction:column;gap:13px;position:sticky;top:0}
+.pipe-rail{display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative;margin-bottom:16px}
+.pipe-card{background:var(--surface);border:1px solid var(--border-soft);padding:14px 16px;position:relative;display:flex;flex-direction:column;gap:7px;min-width:0}
+.pipe-card:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+.pipe-card:last-child{border-radius:0 var(--radius) var(--radius) 0}
+.pipe-card+.pipe-card{border-left:0}
+.pipe-card::after{content:"";position:absolute;right:-7px;top:50%;transform:translateY(-50%) rotate(45deg);width:12px;height:12px;background:var(--surface);border-top:1px solid var(--border-soft);border-right:1px solid var(--border-soft);z-index:2}
+.pipe-card:last-child::after{display:none}
+.pipe-card .pc-tool{font-family:var(--font-mono);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.pipe-card .pc-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex:none}
+.pipe-card.running .pc-dot{background:var(--info);animation:blink .8s infinite}
+.pipe-card.done .pc-dot{background:var(--success)}
+.pipe-card.running{border-color:color-mix(in srgb,var(--info) 45%,transparent)}
+.pipe-card.done{border-color:color-mix(in srgb,var(--success) 35%,transparent)}
+.pipe-card .pc-req{font-size:10.5px;color:var(--fg-faint);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pipe-card .pc-desc{font-size:10.5px;color:var(--fg-muted);line-height:1.5}
+.pipe-card .pc-out{font-size:12px;color:var(--fg-muted);min-height:36px}
+.pipe-card .pc-out b{color:var(--fg);font-family:var(--font-mono)}
+.pipe-card .pc-ms{font-family:var(--font-mono);font-size:10px;color:var(--fg-faint)}
+.pipe-card .pc-replay{align-self:flex-start}
+#agent-report .tiles{grid-template-columns:repeat(3,1fr)}
+.report-sec{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.report-sec>h3{font-size:13px;font-family:var(--font-display);display:flex;align-items:center;gap:8px}
+.report-sec>h3 .cnt{font-family:var(--font-mono);font-size:10.5px;color:var(--fg-faint);font-weight:400}
+.rtable-wrap{overflow-x:auto;border:1px solid var(--border-soft);border-radius:var(--radius);background:var(--surface)}
+table.rtable{width:100%;border-collapse:collapse;font-size:12px;min-width:560px}
+table.rtable th{text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--fg-faint);font-family:var(--font-display);padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.rtable td{padding:8px 12px;border-bottom:1px solid var(--border-soft);vertical-align:middle}
+table.rtable tr:last-child td{border-bottom:0}
+table.rtable tbody tr:hover{background:var(--surface-2)}
+.tag{font-size:10px;font-family:var(--font-mono);padding:2px 7px;border-radius:5px;border:1px solid;white-space:nowrap}
+.cover-chips{display:flex;gap:4px;flex-wrap:wrap}
+.cover-chip{font-size:10px;font-family:var(--font-mono);padding:1px 7px;border-radius:5px;background:var(--bg-soft);border:1px solid var(--border-soft);color:var(--fg-muted);cursor:pointer}
+.cover-chip:hover{border-color:var(--accent);color:var(--fg)}
+.uncovered-card{border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);background:color-mix(in srgb,var(--danger) 7%,var(--surface));border-radius:var(--radius);padding:13px 16px;display:flex;flex-direction:column;gap:8px}
+.uncovered-card h3{font-size:13px;color:var(--danger);display:flex;gap:8px;align-items:center}
+.diff-area{font-family:var(--font-mono);font-size:11px;line-height:1.6;width:100%;resize:vertical;background:var(--bg-soft)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1120px){
+  .impact-grid{grid-template-columns:290px 1fr}
+  .mcp-grid{grid-template-columns:330px 1fr}
+  .gsearch input{width:150px}
+}
+@media (max-width:920px){
+  .agent-grid{grid-template-columns:1fr}
+  .agent-form{position:static}
+  .pipe-rail{grid-template-columns:1fr}
+  .pipe-card:first-child{border-radius:var(--radius) var(--radius) 0 0}
+  .pipe-card:last-child{border-radius:0 0 var(--radius) var(--radius)}
+  .pipe-card+.pipe-card{border-left:1px solid var(--border-soft);border-top:0}
+  .pipe-card::after{right:auto;left:50%;top:auto;bottom:-7px;transform:translateX(-50%) rotate(135deg)}
+  .gsidebar{position:absolute;left:0;top:0;bottom:0;z-index:25;transform:translateX(-104%);transition:transform .24s;box-shadow:var(--shadow);width:280px}
+  .gsidebar.open{transform:none}
+  .mobile-side-toggle{display:inline-flex}
+  .impact-grid,.mcp-grid{grid-template-columns:1fr}
+  .impact-form{position:static}
+  .brand-sub{display:none}
+  .navtab span{display:none}
+  .navtab{padding:7px 10px}
+  .gsearch input{width:120px}
+  .drawer{width:100%}
+  .proto-badge{display:none}
+}
+@media (max-width:560px){
+  .gsearch{display:none}
+  .view-scroll{padding-top:16px}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  #agent-report .tiles{grid-template-columns:repeat(2,1fr)}
+  .statusbar{gap:10px}
+  .statusbar .sb-hide{display:none}
+  .statusbar .sb-stats{gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .repo-toolbar input[type=search]{width:100%}
+  .goverlay-tr{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+
+<!-- ================= topnav ================= -->
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+      <path d="M9 21L16 10L23 21" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M9 21H23" stroke="var(--magenta)" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="16" cy="10" r="2.6" fill="var(--mint)"/>
+      <circle cx="9" cy="21" r="2.6" fill="var(--amber)"/>
+      <circle cx="23" cy="21" r="2.6" fill="var(--violet)"/>
+    </svg>
+    <div>
+      <div class="brand-name">CodeLoom</div>
+      <div class="brand-sub">代码知识图谱 · CODE KNOWLEDGE GRAPH</div>
+    </div>
+  </div>
+  <div class="navtabs" role="tablist">
+    <button class="navtab" data-route="graph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7 7.5l3.5 8M17 7.5l-3.5 8M7.5 6h9"/></svg><span>服务目录</span></button>
+    <button class="navtab" data-route="impact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg><span>影响分析</span></button>
+    <button class="navtab" data-route="repos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 9h16M9 9v11"/><circle cx="6.5" cy="6.5" r=".8" fill="currentColor"/></svg><span>仓库管理</span></button>
+    <button class="navtab" data-route="agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/><path d="M12 8a4 4 0 0 1 4 4"/></svg><span>变更影响</span></button>
+    <button class="navtab" data-route="mcp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12"/></svg><span>MCP 服务</span></button>
+  </div>
+  <div class="nav-right">
+    <span class="proto-badge">REAL INDEX · LOCAL</span>
+    <div class="gsearch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+      <input id="global-search" type="search" placeholder="搜索符号… ( / )" autocomplete="off">
+      <div class="gsearch-results" id="gs-results" hidden></div>
+    </div>
+    <button class="iconbtn" id="refresh-btn" title="刷新索引快照" aria-label="刷新索引快照">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
+    </button>
+    <button class="iconbtn" id="theme-toggle" title="切换主题" aria-label="切换主题">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ================= workspace ================= -->
+<main class="workspace">
+
+  <!-- ===== graph explorer ===== -->
+  <section class="view" id="view-graph">
+    <div class="gviewbar">
+      <select id="repo-focus" class="hud-select" title="选择服务" aria-label="选择服务"></select>
+      <div class="hud" id="graph-hud">…</div>
+    </div>
+    <div class="tree-wrap" id="tree-wrap">
+      <div class="tree-tools">
+        <input id="tree-filter" type="search" placeholder="过滤 API 路径 / Topic / Job 名称…">
+        <span class="faint" id="tree-summary" style="font-size:11.5px"></span>
+      </div>
+      <div id="tree-body"></div>
+    </div>
+  </section>
+
+  <!-- ===== impact ===== -->
+  <section class="view" id="view-impact" hidden>
+    <div class="view-scroll">
+      <div class="view-head">
+        <h1>影响分析 <span class="type-badge" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent)">IMPACT</span></h1>
+        <p>选择一个变更方法，沿调用图反向追踪至 HTTP 入口、MQ 消费者、定时任务与前端页面，回答「这次改动波及哪些功能」。高扇入工具方法自动截断。</p>
+      </div>
+      <div class="view-body impact-grid">
+        <div class="card impact-form">
+          <div class="field"><label for="imp-repo">仓库</label><select id="imp-repo"></select></div>
+          <div class="field"><label for="imp-method">变更方法</label><select id="imp-method"></select></div>
+          <div class="field"><label for="imp-depth">反向追踪深度 <span class="mono muted" id="imp-depth-out">8</span></label><input type="range" id="imp-depth" min="2" max="12" value="8"><span class="hint">超过深度的路径标记为截断</span></div>
+          <div class="field"><label>纳入置信度</label>
+            <label class="checkline"><input type="checkbox" id="imp-conf-certain" checked> certain · 直接调用</label>
+            <label class="checkline"><input type="checkbox" id="imp-conf-inferred" checked> inferred · DI/接口推断</label>
+            <label class="checkline"><input type="checkbox" id="imp-conf-speculative" checked> speculative · 多候选</label>
+          </div>
+          <div class="field"><label for="imp-fanin">高扇入截断阈值</label><input type="number" id="imp-fanin" value="30" min="1" max="500"><span class="hint">仅剔除高扇入且命中工具路径/命名（util/common/helper…）的方法；业务 hub 不截断</span></div>
+          <button class="btn primary" id="imp-run" style="width:100%;padding:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+            开始分析
+          </button>
+          <div class="runsteps" id="imp-steps" hidden>
+            <div class="runstep" data-step="0"><span class="rs-dot"></span>定位变更方法</div>
+            <div class="runstep" data-step="1"><span class="rs-dot"></span>反向调用遍历</div>
+            <div class="runstep" data-step="2"><span class="rs-dot"></span>入口点识别</div>
+            <div class="runstep" data-step="3"><span class="rs-dot"></span>业务映射</div>
+            <div class="progressbar"><i id="imp-progress"></i></div>
+          </div>
+        </div>
+        <div id="imp-results">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/></svg>
+            <h3>选择变更方法，开始影响分析</h3>
+            <p>推荐示例：inventory-service 的 <span class="mono">deductStock()</span> —— 一次库存扣减改动，如何波及下单页面与通知链路。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== trace ===== -->
+
+
+  <!-- ===== agent loop ===== -->
+  <section class="view" id="view-agent" hidden>
+    <div class="view-scroll">
+      <div class="view-head">
+        <h1>变更影响 <span class="type-badge" style="color:var(--lime);border-color:color-mix(in srgb,var(--lime) 45%,transparent)">CHANGE → IMPACT → TESTS</span></h1>
+        <p>选一个提交（或粘贴 diff），自动产出这次变更的「体检报告」：波及哪些接口/页面/MQ/任务、必须跑哪些单测、哪些改动没有测试覆盖。这也是 coding agent 接入 MCP 后会走的流程，每一步都能在 MCP 控制台看到原始查询。</p>
+      </div>
+      <div class="view-body agent-grid">
+        <div class="card agent-form">
+          <div class="field"><label for="ag-repo">仓库</label><select id="ag-repo"></select></div>
+          <div class="field"><label for="ag-commit">提交 / 变更集</label><select id="ag-commit"></select></div>
+          <div class="field"><label for="ag-diff">或粘贴 unified diff</label><textarea id="ag-diff" rows="7" class="diff-area" placeholder="diff --git a/… b/…&#10;@@ -60,7 +60,9 @@ public void deductStock(…) {&#10;…"></textarea><span class="hint">按 hunk 行号区间匹配方法；留空则使用所选提交</span></div>
+          <label class="checkline"><input type="checkbox" id="ag-cases" checked> 桥接测试用例（API / UI 回归）</label>
+          <label class="checkline"><input type="checkbox" id="ag-spec" checked> 纳入 speculative 调用边</label>
+          <button class="btn primary" id="ag-run" style="width:100%;padding:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+            生成变更报告
+          </button>
+          <div class="muted" style="font-size:11.5px;line-height:1.7">链路：<span class="mono">impact_of_diff</span> → <span class="mono">tests_for_change</span> → <span class="mono">graph_status</span>（可信度校验）。全部为对本地图索引的真实查询。</div>
+        </div>
+        <div id="agent-out">
+          <div class="pipe-rail" id="pipe-rail">
+            <div class="pipe-card" data-step="0"><div class="pc-tool"><span class="pc-dot"></span>impact_of_diff</div><div class="pc-desc">按 diff 找出变更方法，反推受影响的接口 / 页面 / MQ / 任务</div><div class="pc-req">等待运行…</div><div class="pc-out">变更方法 → 影响并集 → 入口聚合</div><div class="pc-ms"></div><button class="btn sm pc-replay" hidden>控制台复现</button></div>
+            <div class="pipe-card" data-step="1"><div class="pc-tool"><span class="pc-dot"></span>tests_for_change</div><div class="pc-desc">从变更方法反向遍历测试代码：必跑单测 + 无覆盖风险</div><div class="pc-req">等待运行…</div><div class="pc-out">反向遍历至测试入口 → 精准选测</div><div class="pc-ms"></div><button class="btn sm pc-replay" hidden>控制台复现</button></div>
+            <div class="pipe-card" data-step="2"><div class="pc-tool"><span class="pc-dot"></span>graph_status</div><div class="pc-desc">索引可信度：各仓索引 commit、新鲜度、静态覆盖率</div><div class="pc-req">等待运行…</div><div class="pc-out">索引新鲜度 / 静态覆盖率 → 可信度</div><div class="pc-ms"></div><button class="btn sm pc-replay" hidden>控制台复现</button></div>
+          </div>
+          <div id="agent-report">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>
+              <h3>选择提交，生成变更报告</h3>
+              <p>推荐示例：<span class="mono">c7f3a21 fix(inventory): 低库存阈值校验调整</span> —— 看一次库存改动如何选出必跑单测与回归用例，并暴露 uncovered 风险。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== repos ===== -->
+  <section class="view" id="view-repos" hidden>
+    <div class="view-scroll">
+      <div class="view-head">
+        <h1>仓库管理 <span class="type-badge" style="color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)">REPOS</span></h1>
+        <p>指定仓库地址即完成接入：clone → tree-sitter 解析 → 符号解析 → 契约抽取 → 跨仓缝合 → 写入图谱。全程免编译，代码不出内网。</p>
+      </div>
+      <div class="view-body">
+        <div class="tiles" id="repo-tiles" style="margin-bottom:16px"></div>
+        <div class="repo-toolbar">
+          <input type="search" id="repo-search" placeholder="过滤仓库名 / 地址…">
+          <select id="repo-lang-filter"><option value="">全部语言</option><option>Java</option><option>TypeScript</option></select>
+          <span class="muted" style="font-size:12px" id="repo-count-label"></span>
+          <button class="btn" id="global-config-btn" style="margin-left:auto" title="全局配置（网关前缀、框架约定）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>全局配置</button>
+          <button class="btn primary" id="repo-add-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            添加仓库
+          </button>
+        </div>
+        <div class="bulkbar" id="bulk-bar">
+          <span>已选 <b id="bulk-count">0</b> 个仓库</span>
+          <button class="btn sm" id="bulk-reindex">批量重建索引</button>
+          <button class="btn sm danger" id="bulk-delete">删除所选</button>
+          <button class="btn sm" id="bulk-clear" style="margin-left:auto">取消选择</button>
+        </div>
+        <div class="table-wrap">
+          <table class="repos">
+            <thead><tr>
+              <th style="width:34px"><input type="checkbox" class="rowcheck" id="repo-check-all" aria-label="全选"></th>
+              <th class="sortable" data-sort="name">仓库<span class="sort-arrow"></span></th>
+              <th>分支</th><th>语言</th><th>测试</th>
+              <th class="sortable" data-sort="nodes">节点<span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="edges">关系<span class="sort-arrow"></span></th>
+              <th class="sortable" data-sort="lastIndex">最近索引<span class="sort-arrow"></span></th>
+              <th>状态</th><th style="width:110px">操作</th>
+            </tr></thead>
+            <tbody id="repo-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== mcp ===== -->
+  <section class="view" id="view-mcp" hidden>
+    <div class="view-scroll">
+      <div class="view-head">
+        <h1>MCP 服务 <span class="type-badge" style="color:var(--mint);border-color:color-mix(in srgb,var(--mint) 45%,transparent)">AGENT READY</span></h1>
+        <p>图谱以 MCP 工具形式暴露给 Claude Code / Cursor 等 agent。下方控制台与 MCP 工具同源引擎，查询当前真实索引 —— 试试搜索符号或追踪调用者。</p>
+      </div>
+      <div class="view-body mcp-grid">
+        <div class="mcp-left">
+          <div class="card server-card">
+            <div class="server-status"><span class="pulse-dot"></span><b>codeloom-mcp</b><span class="muted" style="font-size:12px">运行中</span></div>
+            <dl class="kv">
+              <dt>传输</dt><dd>stdio + streamable-http</dd>
+              <dt>端点</dt><dd id="mcp-endpoint">…</dd>
+              <dt>索引</dt><dd id="mcp-index-stat">…</dd>
+              <dt>LLM 依赖</dt><dd>无 · 纯本地图查询</dd>
+            </dl>
+            <div class="sec-label">接入 Claude Code</div>
+            <div class="snippet" id="mcp-install-snippet">claude mcp add codeloom -- \
+  npx -y codeloom mcp</div>
+            <button class="btn sm copybtn" data-copy="mcp-install-snippet" style="position:static;align-self:flex-start">复制命令</button>
+          </div>
+          <div class="card" style="padding:10px">
+            <div class="sec-label" style="padding:4px 8px 8px">工具列表 · 点击载入控制台</div>
+            <div id="mcp-tool-list"></div>
+          </div>
+        </div>
+        <div class="card console-card">
+          <div class="console-head">
+            <span class="sec-label">查询控制台</span>
+            <select id="mcp-tool-select" style="margin-left:auto"></select>
+            <button class="btn primary" id="mcp-run">执行查询</button>
+          </div>
+          <div class="param-grid" id="mcp-params"></div>
+          <div class="example-chips" id="mcp-examples"></div>
+          <div class="resp-meta" id="mcp-resp-meta" hidden><span class="ok">✓ 200</span><span id="mcp-latency"></span><span>本地索引 · 无 LLM 调用</span></div>
+          <div class="jsonview" id="mcp-response" hidden></div>
+          <div>
+            <div class="sec-label" style="margin-bottom:6px">最近查询</div>
+            <div id="mcp-history"><span class="faint" style="font-size:11.5px">暂无记录</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== shared drawer ===== -->
+  <aside class="drawer" id="drawer" aria-label="节点详情">
+    <div class="drawer-head">
+      <div class="top">
+        <h2 id="drawer-title">…</h2>
+        <button class="iconbtn" id="drawer-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div id="drawer-badges" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+</main>
+
+<!-- ================= statusbar ================= -->
+<footer class="statusbar">
+  <span>CodeLoom v0.1.0 · serve</span>
+  <span class="sb-hide">tree-sitter · 免编译 · 代码不出内网</span>
+  <div class="sb-stats">
+    <span>仓库 <b id="sb-repos">0</b></span>
+    <span>节点 <b id="sb-nodes">0</b></span>
+    <span>关系 <b id="sb-edges">0</b></span>
+    <span class="sb-hide">跨仓边 <b id="sb-cross">0</b></span>
+    <span class="sb-hide">测试 <b id="sb-tests">0</b></span>
+    <span>MCP <b style="color:var(--success)">ready</b></span>
+  </div>
+</footer>
+
+<div class="modal-scrim" id="modal-global-config" hidden>
+  <div class="modal" role="dialog" aria-label="全局配置">
+    <div class="modal-head"><h2>全局配置 · 网关与适配约定</h2><button class="iconbtn" id="gcfg-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="modal-body">
+      <div class="field"><span class="sec-label">网关前缀剥离（所有消费端仓库生效）</span><span class="hint">前缀匹配到调用路径时，剥离 strip 段再与后端端点匹配。如 /api-order/** → order-service，strip=1</span></div>
+      <div id="gcfg-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn sm" id="gcfg-add" style="align-self:flex-start">+ 添加前缀</button>
+      <div class="field"><label for="gcfg-json">高级配置（JSON，覆盖默认约定）</label><textarea id="gcfg-json" rows="9" class="diff-area" spellcheck="false"></textarea></div>
+      <label class="checkline"><input type="checkbox" id="gcfg-reindex" checked> 保存后重建全部仓库索引（网关规则改动需要）</label>
+      <div class="form-err" id="gcfg-err"></div>
+      <button class="btn primary" id="gcfg-save" style="width:100%;padding:10px">保存全局配置</button>
+      <div class="muted" id="gcfg-status" style="font-size:11.5px"></div>
+    </div>
+  </div>
+</div>
+<div class="modal-scrim" id="modal-trace" hidden>
+  <div class="modal wide" role="dialog" aria-label="跨仓链路">
+    <div class="modal-head">
+      <div style="min-width:0"><h2 id="trace-title" style="font-family:var(--font-mono);font-size:14px">…</h2><div id="trace-sub" class="faint" style="font-size:11.5px;margin-top:2px"></div></div>
+      <span style="display:flex;gap:6px;flex:none"><button class="btn sm" id="trace-fit">适配宽度</button><button class="iconbtn" id="trace-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="trace-wrap" id="trace-wrap"></div>
+      <div class="trace-controls">
+        <button class="iconbtn" id="tr-prev" title="上一步"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14l-10-7z"/></svg></button>
+        <button class="btn primary" id="tr-play" style="min-width:96px">▶ 播放链路</button>
+        <button class="iconbtn" id="tr-next" title="下一步"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l10-7z"/></svg></button>
+        <div class="trace-caption" id="tr-caption"></div>
+      </div>
+      <div class="trace-legend" id="tr-legend"></div>
+    </div>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<!-- ================= add repo modal ================= -->
+<div class="modal-scrim" id="modal-add" hidden>
+  <div class="modal" role="dialog" aria-label="添加仓库">
+    <div class="modal-head"><h2 id="add-modal-title">添加仓库</h2><button class="iconbtn" id="add-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="modal-body" id="add-form-body">
+      <div class="field"><label for="add-url">Git 仓库地址</label><input id="add-url" placeholder="https://git.internal.cn/team/service.git" autocomplete="off"><span class="hint">支持 HTTPS / SSH，私有仓库填写访问令牌</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label for="add-branch">分支</label><input id="add-branch" value="main"></div>
+        <div class="field"><label for="add-lang">主语言</label><select id="add-lang"><option>Java</option><option>TypeScript</option><option>Python</option><option>Go</option></select></div>
+      </div>
+      <div class="field"><label for="add-token">访问令牌（可选）</label><input id="add-token" type="password" placeholder="仅存于本地，用于 clone 私有仓库"></div>
+      <div class="form-err" id="add-err"></div>
+      <button class="btn primary" id="add-submit" style="width:100%;padding:10px">开始接入并分析</button>
+    </div>
+    <div class="modal-body" id="add-progress-body" hidden>
+      <div class="terminal" id="add-terminal"></div>
+      <div class="progressbar"><i id="add-progress"></i></div>
+      <div class="muted" style="font-size:12px" id="add-status-label">正在接入…</div>
+      <button class="btn primary" id="add-done" hidden style="width:100%">完成 · 查看图谱</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= export modal ================= -->
+<div class="modal-scrim" id="modal-export" hidden>
+  <div class="modal" role="dialog" aria-label="导出图谱">
+    <div class="modal-head"><h2>导出当前图谱</h2><button class="iconbtn" id="export-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="modal-body">
+      <img class="export-img" id="export-img" alt="图谱导出预览">
+      <p class="muted" style="font-size:12px;margin:0">右键（或长按）图片即可保存到本地。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   CodeLoom prototype — seeded microservice graph, real in-memory queries
+   ===================================================================== */
+
+/* ---------------- live data from codeloom serve ---------------- */
+const REPOS = [];
+const NODES = [];
+const EDGES = [];
+let SNIPPETS = {};
+let COMMITS = [];
+let REPO_COMMITS = {};
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+const post = (path, body) => api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+async function loadGraphFromServer() {
+  const data = await api('/api/graph');
+  REPOS.length = 0; NODES.length = 0; EDGES.length = 0;
+  data.repos.forEach((r, i) => REPOS.push({
+    id: r.id, name: r.name, url: r.url, branch: r.branch, lang: r.lang,
+    token: REPO_TOKENS[i % REPO_TOKENS.length],
+    status: r.status === 'stale' ? 'stale' : 'indexed',
+    lastIndex: r.indexed_at, note: r.note, commit_sha: r.commit_sha,
+  }));
+  REPO_COMMITS = Object.fromEntries(REPOS.map(r => [r.id, r.commit_sha]));
+  for (const n of data.nodes) { n.lines = n.start_line != null ? [n.start_line, n.end_line] : null; NODES.push(n); }
+  EDGES.push(...data.edges);
+  rebuildIndex();
+}
+function fillRepoFocus(){
+  const sel=$('#repo-focus'); if(!sel) return;
+  sel.innerHTML='<option value="all">全部仓库</option>'+REPOS.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+  sel.value=state.repoFocus||'all';
+}
+function defaultFocus(){
+  try{ const s=localStorage.getItem('codeloom-focus'); if(s&&(s==='all'||REPOS.some(r=>r.id===s))) return s; }catch(e){}
+  return REPOS[0]?REPOS[0].id:'all';
+}
+function applyRepoFocus(v,persist=true){
+  state.repoFocus=v;
+  if(persist){ try{ localStorage.setItem('codeloom-focus',v); }catch(e){} }
+  const sel=$('#repo-focus'); if(sel) sel.value=v;
+  state.treeOpenSeeded=false;
+  renderTree();
+}
+function focusNode(id){
+  const n=DB.nodes.get(id); if(!n) return;
+  openDrawer(id);
+  const row=document.querySelector('#tree-body [data-id="'+CSS.escape(id)+'"]');
+  if(row){ row.scrollIntoView({block:'center',behavior:'smooth'}); row.classList.add('flash'); setTimeout(()=>row.classList.remove('flash'),900); }
+}
+async function reloadAll() {
+  await loadGraphFromServer();
+  if(state.repoFocus&&state.repoFocus!=='all'&&!REPOS.some(r=>r.id===state.repoFocus)) state.repoFocus=REPOS[0]?REPOS[0].id:'all';
+  fillRepoFocus();
+  applyRepoFocus(state.repoFocus||defaultFocus(),false);
+  updateStats();
+  if (state.route === 'repos') renderRepos();
+  if (state.route === 'agent') { agentInited = false; initAgent(); }
+}
+async function loadCommits(repoId, selectEl) {
+  COMMITS = [];
+  try {
+    const r = await api('/api/commits?repo=' + encodeURIComponent(repoId));
+    COMMITS = r.commits || [];
+  } catch (e) { COMMITS = []; }
+  if (selectEl) selectEl.innerHTML = COMMITS.map(c => '<option value="' + c.sha + '">' + c.sha + ' · ' + esc(c.msg) + '</option>').join('') || '<option value="">no local commits (paste diff)</option>';
+  return COMMITS;
+}
+async function ensureDiff(repoId, commit) {
+  const c = COMMITS.find(x => x.sha === commit);
+  if (c && c.diff !== undefined) return c.diff;
+  const r = await api('/api/diff?repo=' + encodeURIComponent(repoId) + '&commit=' + encodeURIComponent(commit));
+  if (c) c.diff = r.diff;
+  return r.diff;
+}
+
+/* ---------------- runtime state & indexes ---------------- */
+const DB = { nodes:new Map(), edges:[], repos:new Map() };
+let IDX = { out:new Map(), inn:new Map(), callsIn:new Map() };
+const COLORS = {};
+const TYPE_META = {
+  repo:     {label:'仓库',    token:'--steel',   shape:'repo'},
+  type:     {label:'类/接口', token:'--accent',  shape:'circle'},
+  method:   {label:'方法',    token:'--mint',    shape:'circle'},
+  endpoint: {label:'API 端点',token:'--magenta', shape:'diamond'},
+  topic:    {label:'MQ Topic',token:'--amber',   shape:'hex'},
+  page:     {label:'前端页面',token:'--violet',  shape:'square'},
+  test:     {label:'测试方法',token:'--lime',    shape:'circle'},
+  case:     {label:'测试用例',token:'--cyan',    shape:'square'},
+  file:     {label:'源文件',  token:'--steel',   shape:'circle'},
+  table:    {label:'数据表',  token:'--orange',  shape:'square'},
+  cache:    {label:'缓存键',  token:'--cyan',    shape:'hex'},
+  external: {label:'外部系统',token:'--fg-faint',shape:'diamond'},
+};
+const REL_META = {
+  CALLS:      {label:'CALLS',      token:'--edge-call',  group:'call'},
+  IMPLEMENTS: {label:'IMPLEMENTS', token:'--edge-impl',  group:'struct'},
+  CONTAINS:   {label:'CONTAINS',   token:'--edge-struct',group:'struct'},
+  EXPOSES:    {label:'EXPOSES',    token:'--magenta',    group:'contract'},
+  CONSUMES:   {label:'CONSUMES',   token:'--magenta',    group:'contract'},
+  PRODUCES:   {label:'PRODUCES',   token:'--amber',      group:'contract'},
+  SUBSCRIBES: {label:'SUBSCRIBES', token:'--amber',      group:'contract'},
+  CALLS_API:  {label:'CALLS_API',  token:'--violet',     group:'contract'},
+  ROUTES:     {label:'ROUTES',     token:'--cyan',       group:'contract'},
+  COVERS:     {label:'COVERS',     token:'--cyan',       group:'test'},
+  FLOWS:      {label:'FLOWS',      token:'--accent',     group:'contract'},
+  READS_TABLE:{label:'READS_TABLE',token:'--orange',     group:'data'},
+  WRITES_TABLE:{label:'WRITES_TABLE',token:'--danger',   group:'data'},
+  USES_CACHE: {label:'USES_CACHE', token:'--cyan',       group:'data'},
+};
+const CONF_META = {
+  certain:     {label:'certain · 直接调用', color:'--success'},
+  inferred:    {label:'inferred · DI 推断', color:'--info'},
+  speculative: {label:'speculative · 多候选', color:'--warning'},
+};
+const state = {
+  route:'graph', selected:null, repoFocus:null,
+  treeOpen:new Set(), treeOpenSeeded:false,
+  filters:{ types:new Set(['endpoint','topic','repo']), rels:new Set(Object.keys(REL_META)),
+            confs:new Set(['certain','inferred','speculative']), repos:new Set() },
+  ctl:{ repulsion:1, linkdist:78, cluster:1, nodesize:1, labelzoom:0.8, labels:true, motion:true, arrows:true },
+  savedViews:[], repoSort:{key:'name',dir:1}, repoQuery:'', repoLang:'', bulk:new Set(),
+  trace:{ scen:0, step:-1, playing:false, timer:null },
+  mcp:{ tool:'search_symbol', history:[] },
+  impact:{ last:null },
+};
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (reducedMotion) state.ctl.motion = false;
+
+function rebuildIndex(){
+  DB.nodes.clear(); DB.repos.clear();
+  NODES.forEach(n=>DB.nodes.set(n.id,n));
+  REPOS.forEach(r=>DB.repos.set(r.id,r));
+  DB.edges = EDGES.filter(e=>DB.nodes.has(e.s)&&DB.nodes.has(e.t));
+  IDX.out.clear(); IDX.inn.clear(); IDX.callsIn.clear();
+  DB.edges.forEach(e=>{
+    if(!IDX.out.has(e.s)) IDX.out.set(e.s,[]);
+    if(!IDX.inn.has(e.t)) IDX.inn.set(e.t,[]);
+    IDX.out.get(e.s).push(e); IDX.inn.get(e.t).push(e);
+    if(e.rel==='CALLS') IDX.callsIn.set(e.t,(IDX.callsIn.get(e.t)||0)+1);
+  });
+  updateStats();
+}
+function repoColor(id){ const r=DB.repos.get(id); return r? cssVar(r.token) : cssVar('--fg-faint'); }
+function nodeColor(n){
+  if(n.type==='endpoint'&&n.repo==='external') return cssVar('--fg-faint');
+  return cssVar(TYPE_META[n.type].token);
+}
+function relColor(rel){ return cssVar(REL_META[rel]?REL_META[rel].token:'--edge-call'); }
+function cssVar(name){
+  if(COLORS[name]!==undefined) return COLORS[name];
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  COLORS[name]=v; return v;
+}
+function refreshColors(){ for(const k in COLORS) delete COLORS[k]; }
+function repoNodeCount(id){ let c=0; DB.nodes.forEach(n=>{ if(n.repo===id) c++; }); return c; }
+function repoTestCount(id){ let c=0; DB.nodes.forEach(n=>{ if(n.repo===id&&n.type==='test') c++; }); return c; }
+function repoEdgeCount(id){
+  let c=0; DB.edges.forEach(e=>{ const a=DB.nodes.get(e.s), b=DB.nodes.get(e.t); if((a&&a.repo===id)||(b&&b.repo===id)) c++; }); return c;
+}
+function crossEdgeCount(){
+  let c=0; DB.edges.forEach(e=>{ const a=DB.nodes.get(e.s),b=DB.nodes.get(e.t);
+    if(a&&b&&a.repo!==b.repo&&['CONSUMES','EXPOSES','PRODUCES','SUBSCRIBES','CALLS_API','ROUTES'].includes(e.rel)) c++; });
+  return c;
+}
+function updateStats(){
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  let tests=0; DB.nodes.forEach(n=>{ if(n.type==='test') tests++; });
+  set('sb-repos',REPOS.length); set('sb-nodes',DB.nodes.size); set('sb-edges',DB.edges.length); set('sb-cross',crossEdgeCount()); set('sb-tests',tests);
+  set('mcp-index-stat',`${REPOS.length} 仓库 · ${DB.nodes.size} 节点 · ${DB.edges.length} 边`);
+}
+
+/* ---------------- utils ---------------- */
+const $ = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtAgo(ts){
+  const d=Date.now()-ts;
+  if(d<60e3) return '刚刚';
+  if(d<3600e3) return Math.floor(d/60e3)+' 分钟前';
+  if(d<86400e3) return Math.floor(d/3600e3)+' 小时前';
+  return Math.floor(d/86400e3)+' 天前';
+}
+function hlCode(src){
+  const e=esc(src);
+  return e.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;)|(@\w+)|\b(public|private|protected|class|interface|implements|extends|return|new|void|if|else|for|throw|throws|static|final|import|export|async|await|function|const|let|implements|Override|Transactional)\b|\b(\d+(?:\.\d+)?)\b/g,
+    (m,c,s,a,k,n)=> c?`<span class="tok-c">${m}</span>` : s?`<span class="tok-s">${m}</span>` : a?`<span class="tok-a">${m}</span>` : k?`<span class="tok-k">${m}</span>` : `<span class="tok-n">${m}</span>`);
+}
+function hlJSON(obj){
+  const e=esc(JSON.stringify(obj,null,2));
+  return e.replace(/(&quot;[\s\S]*?&quot;)(\s*:)?|\b(true|false|null)\b|(-?\d+\.?\d*)/g,
+    (m,str,colon,bool,num)=> str? (colon?`<span class="j-key">${str}</span>${colon}`:`<span class="j-str">${str}</span>`) : bool?`<span class="j-bool">${m}</span>` : `<span class="j-num">${m}</span>`);
+}
+function toast(msg, opts){
+  opts=opts||{};
+  const box=$('#toasts'); const el=document.createElement('div'); el.className='toast';
+  const color = opts.type==='danger'?'var(--danger)':opts.type==='warn'?'var(--warning)':'var(--success)';
+  el.innerHTML=`<span class="t-dot" style="background:${color}"></span><span style="flex:1;min-width:0">${esc(msg)}</span>`;
+  if(opts.action){
+    const b=document.createElement('button'); b.textContent=opts.action.label;
+    b.onclick=()=>{ opts.action.fn(); dismiss(); };
+    el.appendChild(b);
+  }
+  box.appendChild(el);
+  const dismiss=()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),260); };
+  setTimeout(dismiss, opts.duration||4200);
+}
+function copyText(text, btn){
+  const done=()=>{ const old=btn.textContent; btn.textContent='已复制 ✓'; setTimeout(()=>btn.textContent=old,1400); };
+  const fallback=()=>{
+    const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ toast('复制失败，请手动选择文本','warn'); }
+    ta.remove();
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done).catch(fallback); }
+  else fallback();
+}
+
+/* ---------------- theme ---------------- */
+function applyTheme(t){
+  if(t) document.documentElement.setAttribute('data-theme',t);
+  else document.documentElement.removeAttribute('data-theme');
+  try{ localStorage.setItem('codeloom-theme',t||''); }catch(e){}
+  refreshColors();
+  if(state.route==='graph') renderTree();
+  if(state.route==='repos') renderRepos();
+}
+(function(){
+  let saved=''; try{ saved=localStorage.getItem('codeloom-theme')||''; }catch(e){}
+  if(saved) document.documentElement.setAttribute('data-theme',saved);
+})();
+$('#theme-toggle').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const dark = cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(dark?'light':'dark');
+});
+
+/* ---------------- router ---------------- */
+const ROUTES=['graph','impact','agent','repos','mcp'];
+function route(name, push){
+  if(!ROUTES.includes(name)) name='graph';
+  state.route=name;
+  if(push!==false && location.hash!=='#'+name) history.replaceState(null,'','#'+name);
+  $$('.navtab').forEach(t=>t.classList.toggle('active',t.dataset.route===name));
+  ROUTES.forEach(r=>{ document.getElementById('view-'+r).hidden = r!==name; });
+  if(name==='graph') renderTree();
+  if(name==='impact') initImpactForm();
+  if(name==='agent') initAgent();
+  if(name==='repos') renderRepos();
+  if(name==='mcp') initMcp();
+  closeDrawer();
+}
+$$('.navtab').forEach(t=>t.addEventListener('click',()=>route(t.dataset.route)));
+window.addEventListener('hashchange',()=>route(location.hash.slice(1),false));
+
+/* ---------------- global search ---------------- */
+const gsInput=$('#global-search'), gsBox=$('#gs-results');
+gsInput.addEventListener('input',()=>{
+  const q=gsInput.value.trim().toLowerCase();
+  if(!q){ gsBox.hidden=true; return; }
+  const hits=[];
+  DB.nodes.forEach(n=>{
+    if(n.type==='repo') return;
+    const doc=((n.props&&((n.props.doc||'')+' '+(n.props.apidoc||'')))||'').toLowerCase();
+    if(n.label.toLowerCase().includes(q)||(n.fqn||'').toLowerCase().includes(q)||((n.props&&n.props.path)||'').toLowerCase().includes(q)||doc.includes(q)) hits.push(n);
+  });
+  hits.sort((a,b)=>a.label.length-b.label.length);
+  gsBox.innerHTML = hits.slice(0,9).map(n=>
+    `<button class="gsr-item" data-id="${esc(n.id)}"><span class="dot" style="background:${nodeColor(n)}"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.label)}</span><span class="repo">${esc(n.repo)}</span></button>`
+  ).join('') || '<div style="padding:10px;font-size:12px;color:var(--fg-faint)">无匹配符号</div>';
+  gsBox.hidden=false;
+});
+gsBox.addEventListener('click',e=>{
+  const b=e.target.closest('.gsr-item'); if(!b) return;
+  gsBox.hidden=true; gsInput.value='';
+  focusNode(b.dataset.id);
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.gsearch')) gsBox.hidden=true; });
+document.addEventListener('keydown',e=>{
+  if(e.key==='/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){ e.preventDefault(); gsInput.focus(); }
+  if(e.key==='Escape'){ closeDrawer(); $('#modal-add').hidden=true; $('#modal-export').hidden=true; gsBox.hidden=true; }
+});
+
+/* ---------------- drawer ---------------- */
+async function fetchCodeInto(n){
+  const slot=document.getElementById('dw-code-slot'); if(!slot) return;
+  let text=SNIPPETS[n.id];
+  if(text===undefined){
+    try{ const r=await api('/api/code?id='+encodeURIComponent(n.id)); text=r.text; SNIPPETS[n.id]=text; }
+    catch(e){ SNIPPETS[n.id]=null; slot.innerHTML=`<div class="muted" style="font-size:11.5px">源码不可用：${esc(e.message)}</div>`; return; }
+  }
+  if(text==null){ slot.innerHTML='<div class="muted" style="font-size:11.5px">源码不可用（远程索引，本地无 checkout）</div>'; return; }
+  slot.innerHTML=`<div class="codeblock"><div class="cb-head"><span>${esc((n.file||'').split('/').pop())}:${n.start_line}</span><span>${esc(n.lang||'')}</span></div><pre>${hlCode(text)}</pre></div>`;
+}
+function typeBadge(n){
+  const c=nodeColor(n);
+  const kind = n.type==='type'? (n.kind==='interface'?'interface':'class') : n.type;
+  return `<span class="type-badge" style="color:${c};border-color:${c}66;background:${c}14">${esc(kind)}</span>`;
+}
+function openDrawer(id){
+  const n=DB.nodes.get(id); if(!n) return;
+  state.selected=id;
+  $('#drawer-title').textContent=n.label;
+  let badges=typeBadge(n);
+  if(n.repo&&n.repo!=='external') badges+=`<span class="type-badge" style="color:${repoColor(n.repo)};border-color:${repoColor(n.repo)}66">${esc(n.repo)}</span>`;
+  if(n.entry) badges+=`<span class="type-badge" style="color:var(--amber);border-color:color-mix(in srgb,var(--amber) 45%,transparent)">入口 · ${n.entry}</span>`;
+  if(n.feign) badges+=`<span class="type-badge" style="color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 45%,transparent)">Feign</span>`;
+  if(n.util) badges+=`<span class="type-badge" style="color:var(--fg-faint);border-color:var(--border)">工具方法</span>`;
+  $('#drawer-badges').innerHTML=badges;
+  const body=$('#drawer-body');
+  let html='';
+  const kv=[];
+  if(n.fqn) kv.push(['符号',n.fqn]);
+  if(n.repo) kv.push(['仓库',n.repo]);
+  if(n.lang) kv.push(['语言',n.lang]);
+  if(n.kind) kv.push(['种类',n.kind]);
+  if(n.route) kv.push(['路由',n.route]);
+  if(n.path) kv.push(['路径',(n.httpMethod||'')+' '+n.path]);
+  if(n.broker) kv.push(['消息队列',n.broker]);
+  if(n.cron) kv.push(['Cron',n.cron]);
+  if(n.vendor) kv.push(['外部系统',n.vendor]);
+  if(n.props&&typeof n.props==='object'){ const p=n.props; if(Array.isArray(p.annotations)&&p.annotations.length) kv.push(['注解',p.annotations.join(', ')]); if(p.cron) kv.push(['Cron',p.cron]); if(p.route) kv.push(['路由',p.route]); if(p.external) kv.push(['外部端点','是']); } else if(n.props) kv.push(['说明',n.props]);
+  if(n.type==='case'){ kv.push(['用例类型',n.caseKind==='ui'?'UI 自动化':'API 自动化']); kv.push(['优先级',n.priority]); kv.push(['执行路由',n.auto]); kv.push(['来源',n.source]); }
+  if(n.type==='test'){ const cov=(IDX.out.get(n.id)||[]).filter(e=>e.rel==='CALLS').map(e=>{const t=DB.nodes.get(e.t);return t?t.label:'';}).filter(Boolean); kv.push(['覆盖方法',cov.join(', ')||'—']); }
+  if(n.file) kv.push(['源文件',n.file.split('/').pop()+(n.lines?`:${n.lines[0]}-${n.lines[1]}`:'')]);
+  if(n.type==='method'){ const fi=IDX.callsIn.get(n.id)||0; kv.push(['调用入度',String(fi)+(fi>4?' · 高扇入':'')]); }
+  if(kv.length) html+=`<dl class="kv">${kv.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`;
+  const docText=n.props&&(n.props.apidoc||n.props.doc);
+  if(docText) html+='<div class="doc-block">'+(n.props.apidoc?'<div class="doc-api">'+esc(n.props.apidoc)+'</div>':'')+(n.props.doc?'<div>'+esc(n.props.doc)+'</div>':'')+'</div>';
+  if(n.file&&n.start_line!=null) html+=`<div id="dw-code-slot"></div>`;
+  const outs=(IDX.out.get(n.id)||[]), ins=(IDX.inn.get(n.id)||[]);
+  const edgeItem=(e,other,dir)=>{
+    const o=DB.nodes.get(other); if(!o) return '';
+    const rc=relColor(e.rel);
+    const conf = e.conf?`<span class="conf-dot" title="${esc(e.conf+(e.ev?' · '+e.ev:''))}" style="background:${cssVar(CONF_META[e.conf].color)}"></span>`:'';
+    return `<button class="edge-item" data-id="${esc(other)}"><span class="rel" style="color:${rc};background:${rc}18;border:1px solid ${rc}40">${dir==='out'?'→':'←'} ${e.rel}</span>${conf}<span class="ename">${esc(o.label)}</span><span class="erepo">${esc(o.repo)}</span></button>`;
+  };
+  if(outs.length) html+=`<div class="edge-group"><h3>出边 · ${outs.length}</h3>${outs.map(e=>edgeItem(e,e.t,'out')).join('')}</div>`;
+  if(ins.length) html+=`<div class="edge-group"><h3>入边 · ${ins.length}</h3>${ins.map(e=>edgeItem(e,e.s,'in')).join('')}</div>`;
+  html+=`<div class="drawer-actions">`;
+  if(n.type==='method') html+=`<button class="btn sm primary" id="dw-impact">影响分析</button>`;
+  body.innerHTML=html;
+  fetchCodeInto(n);
+  body.querySelectorAll('.edge-item').forEach(b=>b.addEventListener('click',()=>{ focusNode(b.dataset.id); }));
+  const imp=$('#dw-impact'); if(imp) imp.addEventListener('click',()=>{ route('impact'); preselectImpact(n.id); });
+  $('#drawer').classList.add('open');
+}
+function closeDrawer(){ $('#drawer').classList.remove('open'); state.selected=null; }
+$('#drawer-close').addEventListener('click',closeDrawer);
+
+/* ---------------- tree view (default): service → API / MQ / JOB ---------------- */
+
+function treeData(){
+  const repos=REPOS.filter(r=>!state.repoFocus||state.repoFocus==='all'||r.id===state.repoFocus);
+  const out=[];
+  for(const r of repos){
+    const apis=[], prod=new Map(), sub=new Map(), jobs=[];
+    for(const e of DB.edges){
+      if(e.rel==='EXPOSES'){ const m=DB.nodes.get(e.s); if(m&&m.repo===r.id){ const ep=DB.nodes.get(e.t); if(ep) apis.push({ep,provider:m}); } }
+      else if(e.rel==='PRODUCES'){ const m=DB.nodes.get(e.s); if(m&&m.repo===r.id){ const t2=DB.nodes.get(e.t); if(t2&&!prod.has(e.t)) prod.set(e.t,t2); } }
+      else if(e.rel==='SUBSCRIBES'){ const m=DB.nodes.get(e.s); if(m&&m.repo===r.id){ const t2=DB.nodes.get(e.t); if(t2&&!sub.has(e.t)) sub.set(e.t,t2); } }
+    }
+    for(const n of DB.nodes.values()) if(n.repo===r.id&&n.entry==='job') jobs.push(n);
+    for(const a of apis){ const cc=consumersOf(a.ep.id, r.id); a.consumers=cc.consumers; a.contracts=cc.contracts; }
+    const outCalls=new Map();
+    for(const e of DB.edges){
+      if(e.rel!=='CONSUMES'&&e.rel!=='CALLS_API') continue;
+      const m=DB.nodes.get(e.s); if(!m||m.repo!==r.id) continue;
+      const ep=DB.nodes.get(e.t); if(!ep||ep.type!=='endpoint'||ep.repo===r.id) continue;
+      if(!outCalls.has(ep.id)) outCalls.set(ep.id,{ep,callers:[]});
+      if(!outCalls.get(ep.id).callers.includes(m)) outCalls.get(ep.id).callers.push(m);
+    }
+    // calls through shared API interfaces (caller → other-repo interface method → CONSUMES)
+    for(const e of DB.edges){
+      if(e.rel!=='CALLS') continue;
+      const m=DB.nodes.get(e.s); if(!m||m.repo!==r.id) continue;
+      const tgt=DB.nodes.get(e.t); if(!tgt||tgt.repo===r.id) continue;
+      for(const ce of IDX.out.get(tgt.id)||[]){
+        if(ce.rel!=='CONSUMES') continue;
+        const ep=DB.nodes.get(ce.t); if(!ep||ep.repo===r.id) continue;
+        if(!outCalls.has(ep.id)) outCalls.set(ep.id,{ep,callers:[]});
+        if(!outCalls.get(ep.id).callers.includes(m)) outCalls.get(ep.id).callers.push(m);
+      }
+    }
+    const tables=new Map(), caches=new Map();
+    for(const e of DB.edges){
+      if(!['READS_TABLE','WRITES_TABLE','USES_CACHE'].includes(e.rel)) continue;
+      const m=DB.nodes.get(e.s); if(!m||m.repo!==r.id) continue;
+      const dn=DB.nodes.get(e.t); if(!dn) continue;
+      if(e.rel==='USES_CACHE'){
+        if(!caches.has(dn.id)) caches.set(dn.id,{node:dn,users:[]});
+        const ce=caches.get(dn.id); if(!ce.users.includes(m)) ce.users.push(m);
+      } else {
+        if(!tables.has(dn.id)) tables.set(dn.id,{node:dn,reads:[],writes:[]});
+        const te=tables.get(dn.id);
+        const arr=e.rel==='READS_TABLE'?te.reads:te.writes;
+        if(!arr.includes(m)) arr.push(m);
+      }
+    }
+    out.push({r,apis,prod:[...prod.values()],sub:[...sub.values()],jobs,outCalls:[...outCalls.values()],tables:[...tables.values()],caches:[...caches.values()]});
+  }
+  return out;
+}
+// direct consumers (Feign/HTTP clients, frontend) plus the service methods that
+// actually invoke them (cross-repo CALLS) — facade → shared API interface → endpoint
+// direct consumers (Feign/HTTP clients) plus the service methods that actually
+// invoke them. Feign *contract interfaces* (e.g. api jars in the provider repo) are
+// reported separately — they are plumbing, not a consuming service.
+function consumersOf(epId, providerRepo){
+  const consumers=new Map(), contracts=new Map();
+  const isProd=n=>n&&n.type!=='test'&&n.entry!=='test';
+  const providers=new Set((IDX.inn.get(epId)||[]).filter(e=>e.rel==='EXPOSES').map(e=>e.s));
+  const isFeignIface=m=>{
+    for(const e of IDX.inn.get(m.id)||[]){
+      if(e.rel!=='CONTAINS') continue;
+      const t2=DB.nodes.get(e.s);
+      if(t2&&t2.type==='type'&&((t2.props&&t2.props.feign)||(t2.props&&Array.isArray(t2.props.annotations)&&t2.props.annotations.includes('FeignClient')))) return true;
+    }
+    return false;
+  };
+  const callersOf=m=>{
+    const res=[]; const q=[{id:m.id,d:0}]; const seen=new Set([m.id]);
+    while(q.length){
+      const {id,d}=q.shift(); if(d>=2) continue;
+      for(const e of IDX.inn.get(id)||[]){
+        if(e.rel!=='CALLS') continue;
+        const c=DB.nodes.get(e.s);
+        if(!c||seen.has(c.id)) continue;
+        seen.add(c.id);
+        if(isProd(c)&&!providers.has(c.id)){ res.push(c); q.push({id:c.id,d:d+1}); }
+      }
+    }
+    return res;
+  };
+  const direct=(IDX.inn.get(epId)||[]).filter(e=>e.rel==='CONSUMES'||e.rel==='CALLS_API').map(e=>DB.nodes.get(e.s)).filter(Boolean);
+  for(const m of direct){
+    const iface=isFeignIface(m);
+    if(m.repo===providerRepo){
+      // self-implemented contract: the interface itself is plumbing, but external
+      // callers (another repo injecting this API jar) still consume the endpoint
+      if(iface){
+        contracts.set(m.id,m);
+        callersOf(m).forEach(c=>{ if(c.repo!==providerRepo) consumers.set(c.id,c); });
+      }
+      continue;
+    }
+    const callers=callersOf(m);
+    if(iface){
+      callers.forEach(c=>consumers.set(c.id,c));
+      contracts.set(m.id,m);
+    } else {
+      if(isProd(m)) consumers.set(m.id,m);
+      callers.forEach(c=>consumers.set(c.id,c));
+    }
+  }
+  return {consumers:[...consumers.values()], contracts:[...contracts.values()]};
+}
+
+function topicPartners(tid){
+  const producers=[], subs=[];
+  for(const e of IDX.inn.get(tid)||[]){
+    if(e.rel==='PRODUCES') producers.push(DB.nodes.get(e.s));
+    if(e.rel==='SUBSCRIBES') subs.push(DB.nodes.get(e.s));
+  }
+  return {producers:producers.filter(Boolean), subs:subs.filter(Boolean)};
+}
+function qualLabel(n){
+  const seg=String(n.fqn||'').split('.').filter(Boolean);
+  if(seg.length>=2) return seg[seg.length-2]+'.'+seg[seg.length-1]+(n.type==='method'||n.entry?'()':'');
+  return n.label;
+}
+function renderTree(){
+  const data=treeData();
+  if(!state.treeOpenSeeded){
+    state.treeOpenSeeded=true;
+    const focus=state.repoFocus&&state.repoFocus!=='all'?state.repoFocus:(data[0]&&data[0].r.id);
+    for(const d of data){
+      if(d.r.id===focus){
+        state.treeOpen.add('r:'+d.r.id);
+        if(d.apis.length) state.treeOpen.add('g:'+d.r.id+':api');
+      }
+    }
+  }
+  const f=$('#tree-filter').value.trim().toLowerCase();
+  const hit=s=>!f||String(s).toLowerCase().includes(f);
+  const open=k=>f?true:state.treeOpen.has(k);
+  let apiTotal=0,mqTotal=0,jobTotal=0;
+  const body=[];
+  for(const d of data){
+    const r=d.r;
+    const apiRows=[];
+    for(const a of d.apis){
+      const label=((a.ep.props&&a.ep.props.httpMethod)||'')+' '+((a.ep.props&&a.ep.props.path)||a.ep.label);
+      const cons=a.consumers; const consRepos=[...new Set(cons.map(c=>c.repo))].slice(0,2).join(', ');
+      const meta='提供 '+a.provider.label+(cons.length?' · '+cons.length+' 消费方'+(consRepos?' ('+consRepos+')':''):'');
+      const pdoc=(a.provider.props&&((a.provider.props.doc||'')+' '+(a.provider.props.apidoc||'')))||'';
+      if(!(hit(label)||hit(meta)||hit(pdoc))) continue;
+      apiTotal++;
+      const key='i:'+a.ep.id;
+      const kids=[
+        '<div class="tree-row lvl3" data-id="'+esc(a.provider.id)+'"><span class="dot" style="background:var(--mint)"></span><span class="t-label">'+esc(qualLabel(a.provider))+'</span><span class="t-meta">提供方 · '+esc(a.provider.repo)+'</span></div>',
+        ...a.consumers.map(c=>'<div class="tree-row lvl3" data-id="'+esc(c.id)+'"><span class="dot" style="background:'+nodeColor(c)+'"></span><span class="t-label">'+esc(qualLabel(c))+'</span><span class="t-meta">消费方 · '+esc(c.repo)+'</span></div>'),
+        ...(a.contracts||[]).map(c=>'<div class="tree-row lvl3" data-id="'+esc(c.id)+'"><span class="dot" style="background:var(--steel)"></span><span class="t-label">'+esc(qualLabel(c))+'</span><span class="t-meta">Feign 契约接口 · 定义于 '+esc(c.repo)+'</span></div>'),
+      ];
+      if(!a.consumers.length&&!(a.contracts||[]).length) kids.push('<div class="tree-empty">无跨服务消费方（未索引消费端，或仅内部调用）</div>');
+      apiRows.push('<div class="tree-row lvl2 '+(open(key)?'open':'')+'" title="'+esc(pdoc).slice(0,200)+'" data-id="'+esc(a.ep.id)+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:var(--magenta)"></span><span class="t-label">'+esc(label)+'</span><span class="t-meta">'+esc(meta)+'<button class="link-btn" data-ep="'+esc(a.ep.id)+'">链路</button></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+kids.join('')+'</div>');
+    }
+    const mqRows=[];
+    const seenMq=new Set();
+    const mqAll=[...d.prod.map(t2=>({t2,kind:'生产'})),...d.sub.map(t2=>({t2,kind:'订阅'}))];
+    for(const item of mqAll){
+      const t2=item.t2, kind=item.kind;
+      const p=topicPartners(t2.id);
+      const meta=kind+' · '+p.producers.length+' 生产 / '+p.subs.length+' 订阅';
+      if(!(hit(t2.label)||hit(meta)||hit((t2.props&&t2.props.doc)||''))) continue;
+      const dedupeKey=t2.id+'|'+kind;
+      if(seenMq.has(dedupeKey)) continue;
+      seenMq.add(dedupeKey);
+      mqTotal++;
+      const key='i:'+dedupeKey;
+      const kids=[
+        ...p.producers.map(x=>'<div class="tree-row lvl3" data-id="'+esc(x.id)+'"><span class="dot" style="background:var(--amber)"></span><span class="t-label">'+esc(qualLabel(x))+'</span><span class="t-meta">生产 · '+esc(x.repo)+'</span></div>'),
+        ...p.subs.map(x=>'<div class="tree-row lvl3" data-id="'+esc(x.id)+'"><span class="dot" style="background:var(--amber)"></span><span class="t-label">'+esc(qualLabel(x))+'</span><span class="t-meta">订阅 · '+esc(x.repo)+'</span></div>'),
+      ];
+      mqRows.push('<div class="tree-row lvl2 '+(open(key)?'open':'')+'" title="'+esc((t2.props&&t2.props.doc)||'').slice(0,200)+'" data-id="'+esc(t2.id)+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:var(--amber)"></span><span class="t-label">'+esc(t2.label)+'</span><span class="t-meta">'+esc(meta)+' <span class="tree-chip">'+esc(kind)+'</span></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+kids.join('')+'</div>');
+    }
+    const outRows=[];
+    for(const oc of d.outCalls){
+      const label=oc.ep.label;
+      const meta='→ '+(oc.ep.repo==='external'?'外部（未索引）':oc.ep.repo)+' · '+oc.callers.length+' 调用点';
+      if(!(hit(label)||hit(meta))) continue;
+      const key='o:'+oc.ep.id;
+      const kids=oc.callers.map(c=>'<div class="tree-row lvl3" data-id="'+esc(c.id)+'"><span class="dot" style="background:var(--mint)"></span><span class="t-label">'+esc(qualLabel(c))+'</span><span class="t-meta">调用点 · '+esc(c.repo)+'</span></div>');
+      outRows.push('<div class="tree-row lvl2 '+(open(key)?'open':'')+'" data-id="'+esc(oc.ep.id)+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:var(--steel)"></span><span class="t-label">'+esc(label)+'</span><span class="t-meta">'+esc(meta)+' <span class="tree-chip">OUT</span><button class="link-btn" data-ep="'+esc(oc.ep.id)+'">链路</button></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+kids.join('')+'</div>');
+    }
+    const tablesRows=[];
+    for(const tb of d.tables){
+      const label=tb.node.label;
+      const meta=[tb.reads.length?'读 '+tb.reads.length:'',tb.writes.length?'写 '+tb.writes.length:''].filter(Boolean).join(' · ');
+      if(!(hit(label)||hit(meta))) continue;
+      const key='t:'+tb.node.id;
+      const kids=[...tb.reads.map(m=>'<div class="tree-row lvl3" data-id="'+esc(m.id)+'"><span class="dot" style="background:var(--mint)"></span><span class="t-label">'+esc(qualLabel(m))+'</span><span class="t-meta">读表 · '+esc(m.repo)+'</span></div>'),
+        ...tb.writes.map(m=>'<div class="tree-row lvl3" data-id="'+esc(m.id)+'"><span class="dot" style="background:var(--danger)"></span><span class="t-label">'+esc(qualLabel(m))+'</span><span class="t-meta">写表 · '+esc(m.repo)+'</span></div>')];
+      tablesRows.push('<div class="tree-row lvl2 '+(open(key)?'open':'')+'" data-id="'+esc(tb.node.id)+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:var(--orange)"></span><span class="t-label">'+esc(label)+'</span><span class="t-meta">'+esc(meta)+' <span class="tree-chip">TABLE</span></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+kids.join('')+'</div>');
+    }
+    const cachesRows=[];
+    for(const cc of d.caches){
+      const label=cc.node.label;
+      const meta=cc.users.length+' 处使用';
+      if(!(hit(label)||hit(meta))) continue;
+      const key='c:'+cc.node.id;
+      const kids=cc.users.map(m=>'<div class="tree-row lvl3" data-id="'+esc(m.id)+'"><span class="dot" style="background:var(--mint)"></span><span class="t-label">'+esc(qualLabel(m))+'</span><span class="t-meta">使用缓存 · '+esc(m.repo)+'</span></div>');
+      cachesRows.push('<div class="tree-row lvl2 '+(open(key)?'open':'')+'" data-id="'+esc(cc.node.id)+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:var(--cyan)"></span><span class="t-label">'+esc(label)+'</span><span class="t-meta">'+esc(meta)+' <span class="tree-chip">CACHE</span></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+kids.join('')+'</div>');
+    }
+    const jobRows=d.jobs.filter(j=>hit(j.label)).map(j=>{
+      jobTotal++;
+      return '<div class="tree-row lvl2" title="'+esc((j.props&&j.props.doc)||'').slice(0,200)+'" data-id="'+esc(j.id)+'"><span class="dot" style="background:var(--cyan)"></span><span class="t-label">'+esc(qualLabel(j))+'</span><span class="t-meta">'+esc((j.props&&(j.props.cron||j.props.jobHandler))||'')+' <span class="tree-chip">JOB</span></span></div>';
+    });
+    const repoHit=!f||apiRows.length||mqRows.length||jobRows.length||outRows.length;
+    if(!repoHit) continue;
+    const counts=apiRows.length+' API · '+mqRows.length+' MQ · '+jobRows.length+' JOB'+(outRows.length?' · '+outRows.length+' OUT':'')+(tablesRows.length?' · '+tablesRows.length+' 表':'')+(cachesRows.length?' · '+cachesRows.length+' 缓存':'');
+    const rKey='r:'+r.id;
+    const grp=(key,label,color,rows,count)=>{
+      if(f&&!rows.length) return '';
+      return '<div class="tree-row lvl1 '+(open(key)?'open':'')+'" data-toggle="'+esc(key)+'"><span class="caret">▸</span><span class="dot" style="background:'+color+'"></span><span class="t-label" style="font-family:var(--font-display);letter-spacing:.6px">'+label+'</span><span class="t-meta"><span class="tree-chip">'+count+' 个</span></span></div><div class="tree-children '+(open(key)?'open':'')+'">'+(rows.length?rows.join(''):'<div class="tree-empty">无</div>')+'</div>';
+    };
+    body.push('<div class="tree-row lvl0 '+(open(rKey)?'open':'')+'" data-toggle="'+esc(rKey)+'"><span class="caret">▸</span><span class="dot" style="background:'+repoColor(r.id)+'"></span><span class="t-label" style="font-family:var(--font-display)">'+esc(r.name)+'</span><span class="t-meta">'+counts+'</span></div>'+
+      '<div class="tree-children '+(open(rKey)?'open':'')+'">'+
+        grp('g:'+r.id+':api','API','var(--magenta)',apiRows,apiRows.length)+
+        grp('g:'+r.id+':mq','MQ','var(--amber)',mqRows,mqRows.length)+
+        grp('g:'+r.id+':job','JOB','var(--cyan)',jobRows,jobRows.length)+
+        grp('g:'+r.id+':out','OUTBOUND','var(--steel)',outRows,outRows.length)+
+        grp('g:'+r.id+':table','TABLES','var(--orange)',tablesRows,tablesRows.length)+
+        grp('g:'+r.id+':cache','CACHE','var(--cyan)',cachesRows,cachesRows.length)+
+      '</div>');
+  }
+  $('#tree-body').innerHTML=body.join('') || '<div class="tree-empty" style="padding:24px">当前聚焦仓库没有可展示的入口（API / MQ / JOB）。</div>';
+  let outAll=0, tableAll=0, cacheAll=0;
+  for(const d of data){ outAll+=d.outCalls.length; tableAll+=d.tables.length; cacheAll+=d.caches.length; }
+  const sum=data.length+' 个服务 · '+apiTotal+' API · '+mqTotal+' MQ · '+jobTotal+' JOB · '+outAll+' OUT · '+tableAll+' 表 · '+cacheAll+' 缓存';
+  $('#tree-summary').textContent=sum;
+  const hud=$('#graph-hud'); if(hud) hud.textContent=sum;
+}
+$('#tree-body').addEventListener('click',e=>{
+  const lb=e.target.closest('.link-btn');
+  if(lb){ e.stopPropagation(); openTrace(lb.dataset.ep); return; }
+  const row=e.target.closest('.tree-row'); if(!row) return;
+  const key=row.dataset.toggle;
+  const caret=e.target.closest('.caret');
+  if(key&&(caret||!row.dataset.id)){
+    if(state.treeOpen.has(key)) state.treeOpen.delete(key); else state.treeOpen.add(key);
+    renderTree(); return;
+  }
+  if(row.dataset.id) openDrawer(row.dataset.id);
+});
+$('#tree-filter').addEventListener('input',()=>renderTree());
+/* ---------------- impact engine (real reverse traversal) ---------------- */
+function impactAnalysis(startId, opts){
+  opts=opts||{};
+  const depth=opts.depth||5;
+  const confs=opts.confs||new Set(['certain','inferred']);
+  const fanin=opts.fanin!=null?opts.fanin:4;
+  const start=DB.nodes.get(startId);
+  if(!start) return null;
+  const visited=new Map([[startId,{parent:null,edge:null,dist:0}]]);
+  const affected=new Set([startId]);
+  const truncated=[];
+  const queue=[{id:startId,dist:0}];
+  let depthCut=0;
+  while(queue.length){
+    const {id,dist}=queue.shift();
+    const n=DB.nodes.get(id);
+    if(dist>=depth){ depthCut++; continue; }
+    const deps=[];
+    (IDX.inn.get(id)||[]).forEach(e=>{
+      const isDispatch=e.conf==='speculative'&&(e.ev||'').startsWith('接口');
+      if(e.rel==='CALLS'&&(confs.has(e.conf||'certain')||isDispatch)) deps.push({id:e.s,edge:e});
+      if(n.type==='endpoint'&&['CONSUMES','CALLS_API'].includes(e.rel)) deps.push({id:e.s,edge:e});
+      if(n.type==='topic'&&e.rel==='SUBSCRIBES') deps.push({id:e.s,edge:e});
+      if(n.type==='method'&&e.rel==='CONTAINS'){ const p=DB.nodes.get(e.s); if(p&&p.type==='page') deps.push({id:e.s,edge:e}); }
+    });
+    if(n.type==='method'){
+      (IDX.out.get(id)||[]).forEach(e=>{
+        if(e.rel==='EXPOSES'||e.rel==='PRODUCES') deps.push({id:e.t,edge:e});
+      });
+    }
+    for(const d of deps){
+      const dn=DB.nodes.get(d.id);
+      if(!dn||visited.has(d.id)) continue;
+      const isUtil=/\/(util|utils|common|enums|helper|constant)\//.test(dn.file||'')||/(Util|Utils|Helper|Constants?)\./.test(dn.fqn||'');
+      if(dn.type==='method'&&isUtil&&(IDX.callsIn.get(d.id)||0)>fanin){
+        if(!truncated.find(t=>t.id===d.id)) truncated.push({id:d.id,label:dn.label,repo:dn.repo,fanin:IDX.callsIn.get(d.id)});
+        continue;
+      }
+      visited.set(d.id,{parent:id,edge:d.edge,dist:dist+1});
+      affected.add(d.id);
+      queue.push({id:d.id,dist:dist+1});
+    }
+  }
+  const entries=[];
+  affected.forEach(id=>{
+    const n=DB.nodes.get(id);
+    if(id!==startId&&(n.type==='page'||n.entry||n.type==='external')) entries.push(id);
+  });
+  const paths=entries.map(eid=>{
+    const chain=[]; let cur=eid;
+    while(cur){ chain.push(cur); cur=visited.get(cur).parent; }
+    let worst='certain';
+    chain.forEach(id=>{ const v=visited.get(id); if(v&&v.edge&&v.edge.conf){
+      if(v.edge.conf==='speculative') worst='speculative';
+      else if(v.edge.conf==='inferred'&&worst==='certain') worst='inferred';
+    }});
+    const en=DB.nodes.get(eid);
+    return {entry:eid, entryKind:en.type==='page'?'page':(en.entry||'external'), chain, conf:worst, hops:chain.length-1};
+  });
+  const topPaths=paths.filter(p=>!paths.some(o=>o!==p&&o.chain.includes(p.entry)));
+  topPaths.sort((a,b)=>a.hops-b.hops);
+  const repos=new Set(); affected.forEach(id=>{ const r=DB.nodes.get(id).repo; if(r!=='external') repos.add(r); });
+  return {
+    start:startId, affected:[...affected], paths:topPaths, truncated, repos:[...repos], depthCut,
+    summary:{
+      repos:repos.size,
+      http:topPaths.filter(p=>p.entryKind==='http').length,
+      pages:topPaths.filter(p=>p.entryKind==='page').length,
+      mq:topPaths.filter(p=>p.entryKind==='mq').length,
+      job:topPaths.filter(p=>p.entryKind==='job').length,
+      test:topPaths.filter(p=>p.entryKind==='test').length,
+      truncated:truncated.length,
+    }
+  };
+}
+const ENTRY_LABEL={http:'HTTP 入口',page:'前端页面',mq:'MQ 消费者',job:'定时任务',test:'单元测试',external:'外部边界'};
+const ENTRY_COLOR={http:'--magenta',page:'--violet',mq:'--amber',job:'--cyan',test:'--lime',external:'--fg-faint'};
+function confRank(c){ return c==='speculative'?2:c==='inferred'?1:0; }
+
+/* ---------------- impact view ---------------- */
+let impactInited=false;
+function methodsOfRepo(repoId){
+  const arr=[]; DB.nodes.forEach(n=>{ if(n.type==='method'&&n.repo===repoId) arr.push(n); });
+  return arr.sort((a,b)=>a.label.localeCompare(b.label));
+}
+function initImpactForm(){
+  if(impactInited) return; impactInited=true;
+  const repoSel=$('#imp-repo'), mSel=$('#imp-method');
+  REPOS.forEach(r=>{
+    if(methodsOfRepo(r.id).length){ const o=document.createElement('option'); o.value=r.id; o.textContent=r.name; repoSel.appendChild(o); }
+  });
+  const fillMethods=()=>{
+    mSel.innerHTML='';
+    methodsOfRepo(repoSel.value).forEach(n=>{
+      const o=document.createElement('option'); o.value=n.id;
+      o.textContent=n.label+(n.entry?`  [${n.entry} 入口]`:'')+(n.util?'  [工具]':'');
+      mSel.appendChild(o);
+    });
+  };
+  repoSel.addEventListener('change',fillMethods);
+  const firstRepo=(REPOS.find(r=>methodsOfRepo(r.id).length)||{}).id||'';
+  repoSel.value=firstRepo; fillMethods();
+  const preferred=[...mSel.options].find(o=>o.value.includes('Impl'))||mSel.options[0];
+  if(preferred) mSel.value=preferred.value;
+  $('#imp-depth').addEventListener('input',()=>$('#imp-depth-out').textContent=$('#imp-depth').value);
+  $('#imp-run').addEventListener('click',runImpact);
+}
+function preselectImpact(methodId){
+  const n=DB.nodes.get(methodId); if(!n) return;
+  initImpactForm();
+  $('#imp-repo').value=n.repo;
+  $('#imp-repo').dispatchEvent(new Event('change'));
+  $('#imp-method').value=methodId;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function runImpact(){
+  const btn=$('#imp-run'); btn.disabled=true;
+  const stepsBox=$('#imp-steps'); stepsBox.hidden=false;
+  const steps=$$('#imp-steps .runstep');
+  steps.forEach(s=>{s.classList.remove('active','done'); s.querySelector('.rs-dot').textContent='';});
+  const bar=$('#imp-progress'); bar.style.width='0';
+  const labels=['定位变更方法','反向调用遍历','入口点识别','业务映射'];
+  for(let i=0;i<4;i++){
+    steps[i].classList.add('active');
+    bar.style.width=((i+1)/4*100)+'%';
+    await sleep(reducedMotion?30:260);
+    steps[i].classList.remove('active'); steps[i].classList.add('done');
+    steps[i].querySelector('.rs-dot').textContent='✓';
+  }
+  const confs=new Set();
+  if($('#imp-conf-certain').checked) confs.add('certain');
+  if($('#imp-conf-inferred').checked) confs.add('inferred');
+  if($('#imp-conf-speculative').checked) confs.add('speculative');
+  const res=impactAnalysis($('#imp-method').value,{
+    depth:parseInt($('#imp-depth').value,10), confs, fanin:parseInt($('#imp-fanin').value,10)||4,
+  });
+  state.impact.last=res;
+  renderImpactResult(res);
+  btn.disabled=false;
+  toast(`分析完成：波及 ${res.summary.repos} 个服务 · ${res.paths.length} 条入口链路`);
+}
+function renderImpactResult(res){
+  const box=$('#imp-results');
+  if(!res){ box.innerHTML='<div class="empty-state"><h3>未找到该方法</h3></div>'; return; }
+  const start=DB.nodes.get(res.start);
+  const s=summaryTiles(res);
+  let html=`<div style="display:flex;flex-direction:column;gap:14px">`;
+  html+=`<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span class="type-badge" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,transparent);background:color-mix(in srgb,var(--danger) 10%,transparent)">变更方法</span>
+    <span class="mono" style="font-weight:600;font-size:14px">${esc(start.label)}</span>
+    <span class="faint mono" style="font-size:11px">${esc(start.repo)}</span>
+    <span style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn sm" id="imp-copy">复制 JSON</button>
+    </span></div>`;
+  html+=`<div class="tiles">${s}</div>`;
+  if(res.paths.length){
+    html+=`<div class="sec-label" style="margin-top:4px">波及链路 · ${res.paths.length} 条（入口 → 变更方法）</div>`;
+    res.paths.forEach(p=>{
+      const en=DB.nodes.get(p.entry);
+      const ec=cssVar(ENTRY_COLOR[p.entryKind]||'--fg-faint');
+      const cc=cssVar(CONF_META[p.conf].color);
+      html+=`<div class="pathcard">
+        <div class="path-head">
+          <span class="entry-badge" style="color:${ec};border-color:${ec}66;background:${ec}12">${ENTRY_LABEL[p.entryKind]||p.entryKind}</span>
+          <span class="mono faint" style="font-size:11px">${esc(en.label)}</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10.5px" class="faint">
+            <span class="conf-dot" style="background:${cc}"></span>${p.conf} · ${p.hops} 跳
+          </span>
+        </div>
+        <div class="path-chain">${p.chain.map((id,i)=>{
+          const n=DB.nodes.get(id);
+          const changed=id===res.start;
+          return `${i?'<span class="parrow">→</span>':''}<button class="pnode${changed?' changed':''}" data-id="${esc(id)}"><span class="dot" style="background:${nodeColor(n)}"></span>${esc(n.label)}<span class="pr">${esc(n.repo==='external'?'ext':n.repo.replace('-service',''))}</span>${changed?'<span class="pr" style="color:var(--danger)">变更</span>':''}</button>`;
+        }).join('')}</div>
+      </div>`;
+    });
+  } else {
+    html+=`<div class="empty-state"><h3>未发现上游入口链路</h3><p>该方法可能是叶子工具方法，或上游调用均被置信度/扇入过滤剔除。尝试提高扇入阈值或纳入 speculative 边。</p></div>`;
+  }
+  if(res.truncated.length){
+    html+=`<div class="card" style="border-color:color-mix(in srgb,var(--warning) 35%,transparent);background:color-mix(in srgb,var(--warning) 6%,var(--surface))">
+      <div style="font-size:12.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="color:var(--warning)">⚠ 高扇入截断</span>
+        ${res.truncated.map(t=>`<span class="mono" style="font-size:11.5px">${esc(t.label)} <span class="faint">入度 ${t.fanin} · ${esc(t.repo)}</span></span>`).join('<span class="faint">·</span>')}
+        <span class="faint" style="font-size:11px">视为工具方法，不计入业务影响链</span>
+      </div></div>`;
+  }
+  if(res.depthCut) html+=`<div class="faint" style="font-size:11.5px">${res.depthCut} 个节点达到深度上限被截断，可调大追踪深度。</div>`;
+  html+=`</div>`;
+  box.innerHTML=html;
+  box.querySelectorAll('.pnode').forEach(b=>b.addEventListener('click',()=>{ focusNode(b.dataset.id); }));
+  $('#imp-copy').addEventListener('click',e=>{
+    copyText(JSON.stringify({changedMethod:res.start,summary:res.summary,paths:res.paths.map(p=>({entry:p.entry,kind:p.entryKind,chain:p.chain,confidence:p.conf})),truncated:res.truncated},null,2), e.currentTarget);
+  });
+}
+function summaryTiles(res){
+  const s=res.summary;
+  const tile=(val,label,color,sub)=>`<div class="tile" style="--tc:${color}"><div class="t-val">${val}</div><div class="t-label">${label}</div>${sub?`<div class="t-sub">${sub}</div>`:''}</div>`;
+  return tile(s.repos,'波及服务','var(--accent)','含变更所在仓库')
+    + tile(s.http,'HTTP 入口','var(--magenta)','Controller 入口方法')
+    + tile(s.pages,'前端页面','var(--violet)','经 CALLS_API 追溯')
+    + tile(s.mq+s.job,'MQ / Job 入口','var(--amber)',`${s.mq} 消费者 · ${s.job} 定时任务`)
+    + tile(s.test||0,'覆盖单测','var(--lime)','反向可达的测试方法')
+    + tile(s.truncated,'截断工具方法','var(--warning)','高扇入自动剔除');
+}
+
+/* ---------------- cross-repo chain popup (opened from service-tree rows) ---------------- */
+function clientTraverse(id,{depth=2,forward=false}={}){
+  const seen=new Set([id]); const out=[]; const q=[{id,d:0}];
+  while(q.length){
+    const {id:cur,d}=q.shift(); if(d>=depth) continue;
+    const edges=forward?(IDX.out.get(cur)||[]):(IDX.inn.get(cur)||[]);
+    for(const e of edges){
+      if(e.rel!=='CALLS') continue;
+      const other=forward?e.t:e.s;
+      if(seen.has(other)) continue;
+      seen.add(other); out.push(DB.nodes.get(other)); q.push({id:other,d:d+1});
+    }
+  }
+  return out.filter(Boolean);
+}
+function clientTopic(tid){
+  const t=DB.nodes.get(tid); const producers=[],subs=[];
+  for(const e of IDX.inn.get(tid)||[]){
+    if(e.rel==='PRODUCES') producers.push({method:e.s,repo:(DB.nodes.get(e.s)||{}).repo});
+    if(e.rel==='SUBSCRIBES') subs.push({method:e.s,repo:(DB.nodes.get(e.s)||{}).repo});
+  }
+  return {topic:tid,label:t?t.label:tid,producers,subscribers:subs,subs};
+}
+function clientTrace(epId){
+  const ep=DB.nodes.get(epId);
+  if(!ep||ep.type!=='endpoint') return {error:'endpoint not found: '+epId};
+  const providers=[],consumers=[],topics=[];
+  for(const e of IDX.inn.get(epId)||[]){
+    if(e.rel==='EXPOSES'){
+      const m=DB.nodes.get(e.s);
+      if(!m) continue;
+      providers.push({method:m.id,label:m.label,repo:m.repo,callees:clientTraverse(m.id,{depth:2,forward:true}).slice(0,8).map(n=>({id:n.id,label:n.label,repo:n.repo}))});
+      for(const out of IDX.out.get(m.id)||[]) if(out.rel==='PRODUCES') topics.push(clientTopic(out.t));
+    }
+    if(e.rel==='CONSUMES'||e.rel==='CALLS_API'){
+      const m=DB.nodes.get(e.s);
+      if(!m) continue;
+      consumers.push({method:m.id,label:m.label,repo:m.repo,client:e.rel,callers:clientTraverse(m.id,{depth:2}).slice(0,8).map(n=>({id:n.id,label:n.label,repo:n.repo}))});
+    }
+  }
+  return {endpoint:epId,path:ep.props&&ep.props.path,providers,consumers,topics};
+}
+function buildScenarioFor(epId){
+  const ep=DB.nodes.get(epId);
+  if(!ep||ep.type!=='endpoint') return null;
+  if(!(ep.props&&ep.props.path)||ep.props.path==='/') return null;
+  const provs=(IDX.inn.get(epId)||[]).filter(e=>e.rel==='EXPOSES').map(e=>e.s);
+  if(!provs.length) return null;
+  const provRepos=[...new Set(provs.map(id=>(DB.nodes.get(id)||{}).repo).filter(Boolean))];
+  let chosen=null;
+  for(const R of provRepos){
+    const cc=consumersOf(epId,R);
+    const cross=cc.consumers.filter(c=>c.repo!==R).slice(0,3);
+    if(cross.length){ chosen={R,consumers:cross}; break; }
+  }
+  // even without cross-service callers a chain can still show provider → callees → tables/redis
+  if(!chosen) chosen={R:provRepos[0]||'external',consumers:[]};
+  const provId=provs.find(id=>(DB.nodes.get(id)||{}).repo===chosen.R)||provs[0];
+  const provNode=DB.nodes.get(provId);
+  const callees=clientTraverse(provId,{depth:2,forward:true}).slice(0,3);
+  const topics=[];
+  for(const e of IDX.out.get(provId)||[]) if(e.rel==='PRODUCES'){ const tp=clientTopic(e.t); if(tp.producers.length||tp.subs.length) topics.push(tp); }
+  const lanes=[], steps=[];
+  const lane=r=>{ const v=r||'external'; if(!lanes.includes(v)) lanes.push(v); return v; };
+  chosen.consumers.forEach((cm,i)=>{ lane(cm.repo); steps.push({n:cm.id,col:i,from:null,cap:'消费方 '+qualLabel(cm)+'（'+cm.repo+'）'}); });
+  const k=chosen.consumers.length;
+  lane(chosen.R);
+  const epIdx=steps.length;
+  steps.push({n:epId,col:k,from:k?k-1:null,cap:'契约节点 '+ep.label+'（提供方 '+chosen.R+'）'});
+  if(provNode){
+    lane(provNode.repo);
+    const pi=steps.length;
+    steps.push({n:provId,col:k+1,from:epIdx,cap:'提供方 '+qualLabel(provNode)});
+    callees.forEach((n,i)=>{ lane(n.repo); steps.push({n:n.id,col:k+2+i,from:i?steps.length-1:pi,cap:'调用 '+qualLabel(n)}); });
+  }
+  // data layer: tables / redis keys used by the provider and its callees
+  const stepIdxOf={};
+  steps.forEach((st,i)=>{ stepIdxOf[st.n]=i; });
+  const dataPairs=[];
+  const collectData=id=>{
+    for(const e of IDX.out.get(id)||[]){
+      if(!['READS_TABLE','WRITES_TABLE','USES_CACHE'].includes(e.rel)) continue;
+      const dn=DB.nodes.get(e.t); if(dn) dataPairs.push({n:dn,rel:e.rel,src:id});
+    }
+  };
+  collectData(provId); callees.forEach(c=>collectData(c.id));
+  const seenD=new Set();
+  dataPairs.slice(0,4).forEach(dp=>{
+    if(seenD.has(dp.n.id)) return; seenD.add(dp.n.id);
+    const laneName=dp.n.type==='table'?'database':'redis';
+    if(!lanes.includes(laneName)) lanes.push(laneName);
+    const kind=dp.rel==='USES_CACHE'?'缓存':(dp.rel==='WRITES_TABLE'?'写表':'读表');
+    steps.push({n:dp.n.id,col:k+2,from:stepIdxOf[dp.src]!=null?stepIdxOf[dp.src]:epIdx,cap:kind+' '+dp.n.label});
+  });
+  topics.slice(0,2).forEach(tp=>{
+    lane((tp.producers[0]||{}).repo);
+    const ti=steps.length;
+    steps.push({n:tp.topic,col:k+2,from:epIdx,cap:'事件 '+tp.label});
+    (tp.subs||[]).slice(0,2).forEach(s=>{ lane(s.repo); steps.push({n:s.method,col:k+3,from:ti,cap:'订阅 '+qualLabel(DB.nodes.get(s.method)||{})}); });
+  });
+  return {id:epId,name:ep.label,desc:'端点 '+ep.label+' 的跨仓契约链路（跨服务消费 '+chosen.consumers.length+' 个）',lanes,steps};
+}
+function openTrace(epId){
+  const scen=buildScenarioFor(epId);
+  if(!scen){ toast('该端点没有可识别的跨仓链路','warn'); return; }
+  state.trace={scenObj:scen,step:-1,playing:false,timer:null};
+  $('#trace-title').textContent=scen.name;
+  $('#trace-sub').textContent=scen.desc;
+  renderScenario(scen);
+  $('#modal-trace').hidden=false;
+}
+let _MC=null;
+function measureLabel(s){
+  if(!_MC){ const c=document.createElement('canvas'); _MC=c.getContext('2d'); }
+  _MC.font="10px 'JetBrains Mono',monospace";
+  return Math.max(40,_MC.measureText(s).width);
+}
+function renderScenario(scen){
+  const laneH=86, padL=150, padT=22, padB=22;
+  const maxCol=Math.max(...scen.steps.map(s=>s.col));
+  // column widths follow the actual label widths so long qualified names never overlap
+  const colW=[]; const colX=[];
+  for(const s of scen.steps){
+    const lab=qualLabel(DB.nodes.get(s.n)); const short=lab.length>34?lab.slice(0,33)+'…':lab;
+    const w=measureLabel(short)+46;
+    colW[s.col]=Math.max(colW[s.col]||0,w);
+  }
+  let acc=padL;
+  for(let c=0;c<=maxCol;c++){ const w=colW[c]||168; colX[c]=acc+w/2; acc+=w; }
+  const W=acc+90, H=padT+scen.lanes.length*laneH+padB;
+  const pos=scen.steps.map(s=>{
+    const li=scen.lanes.indexOf(DB.nodes.get(s.n).repo);
+    return {x:colX[s.col], y:padT+(li<0?0:li)*laneH+laneH/2};
+  });
+  let svg=`<svg class="trace-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  scen.lanes.forEach((lane,i)=>{
+    const y=padT+i*laneH;
+    svg+=`<rect class="lane-band${i%2?' alt':''}" x="0" y="${y}" width="${W}" height="${laneH}"/>`;
+    const col=lane==='external'?cssVar('--fg-faint'):lane==='database'?cssVar('--orange'):lane==='redis'?cssVar('--cyan'):repoColor(lane);
+    svg+=`<circle cx="18" cy="${y+laneH/2}" r="4" fill="${col}"/>`;
+    svg+=`<text class="lane-label" x="30" y="${y+laneH/2+4}">${esc(lane==='external'?'外部系统':lane==='database'?'数据库':lane==='redis'?'Redis':lane)}</text>`;
+    svg+=`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${cssVar('--border-soft')}" stroke-width="1"/>`;
+  });
+  scen.steps.forEach((s,i)=>{
+    if(s.from==null) return;
+    const a=pos[s.from], b=pos[i];
+    const rel=findRelBetween(scen.steps[s.from].n, s.n);
+    const col=relColor(rel);
+    const dx=Math.max(46,(b.x-a.x)*0.5);
+    const d=`M ${a.x+16} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x-18} ${b.y}`;
+    svg+=`<path class="tedge flow" data-step="${i}" d="${d}" stroke="${col}"/>`;
+    if(!reducedMotion) svg+=`<circle r="3.2" fill="${col}" opacity="0.9"><animateMotion dur="${2.2+(i%3)*0.5}s" repeatCount="indefinite" path="${d}"/></circle>`;
+  });
+  scen.steps.forEach((s,i)=>{
+    const n=DB.nodes.get(s.n), p=pos[i], col=nodeColor(n);
+    const shape=TYPE_META[n.type]?TYPE_META[n.type].shape:'circle';
+    let sh='';
+    if(shape==='diamond') sh=`<path class="tn-shape" d="M ${p.x} ${p.y-15} L ${p.x+15} ${p.y} L ${p.x} ${p.y+15} L ${p.x-15} ${p.y} Z" fill="${col}"/>`;
+    else if(shape==='hex'){ let pts=''; for(let k=0;k<6;k++){ const a=Math.PI/6+k*Math.PI/3; pts+=`${p.x+Math.cos(a)*15},${p.y+Math.sin(a)*15} `; } sh=`<polygon class="tn-shape" points="${pts.trim()}" fill="${col}"/>`; }
+    else if(shape==='square') sh=`<rect class="tn-shape" x="${p.x-13}" y="${p.y-13}" width="26" height="26" rx="5" fill="${col}"/>`;
+    else sh=`<circle class="tn-shape" cx="${p.x}" cy="${p.y}" r="13" fill="${col}"/>`;
+    const lab=qualLabel(n); const label=esc(lab.length>34?lab.slice(0,33)+'…':lab);
+    svg+=`<g class="tnode" data-step="${i}" data-id="${esc(n.id)}" style="color:${col}">
+      <rect x="${p.x-60}" y="${p.y-20}" width="120" height="62" fill="transparent" pointer-events="all"/>
+      ${sh}
+      <text x="${p.x}" y="${p.y+26}" text-anchor="middle">${label}</text>
+      <text class="tn-sub" x="${p.x}" y="${p.y+38}" text-anchor="middle">${esc(n.repo)}</text>
+    </g>`;
+  });
+  svg+=`</svg>`;
+  const wrap=$('#trace-wrap');
+  wrap.innerHTML=svg;
+  wrap.querySelectorAll('.tnode').forEach(g=>g.addEventListener('click',()=>openDrawer(g.dataset.id)));
+  $('#tr-legend').innerHTML =
+    Object.entries(TYPE_META).filter(([t])=>['method','endpoint','topic','page'].includes(t)).map(([t,m])=>
+      `<span><i style="background:${cssVar(m.token)}"></i>${m.label}</span>`).join('')
+    + `<span><i style="background:${cssVar('--magenta')}"></i>HTTP 契约边</span>`
+    + `<span><i style="background:${cssVar('--amber')}"></i>MQ 事件边</span>`
+    + `<span><i style="background:${cssVar('--edge-call')}"></i>方法调用</span>`;
+  applyTraceStep();
+}
+function findRelBetween(a,b){
+  const e=DB.edges.find(e=>(e.s===a&&e.t===b)||(e.s===b&&e.t===a));
+  return e?e.rel:'CALLS';
+}
+function applyTraceStep(){
+  const scen=state.trace&&state.trace.scenObj;
+  if(!scen) return;
+  const step=state.trace.step;
+  const wrap=$('#trace-wrap');
+  wrap.querySelectorAll('.tnode').forEach(g=>{
+    const i=parseInt(g.dataset.step,10);
+    g.classList.toggle('lit', step>=0&&i<=step);
+    g.classList.toggle('dim', step>=0&&i>step);
+  });
+  wrap.querySelectorAll('.tedge').forEach(p=>{
+    const i=parseInt(p.dataset.step,10);
+    p.classList.toggle('lit', step>=0&&i<=step);
+    p.style.opacity = step>=0 ? (i<=step?1:.15) : '';
+  });
+  const cap=$('#tr-caption');
+  if(step<0) cap.innerHTML=`${esc(scen.desc)}。<b>点击「播放链路」</b>逐步查看，或点击任意节点看详情。`;
+  else{ const s=scen.steps[step]; cap.innerHTML=`<b>${step+1}/${scen.steps.length} · ${esc(DB.nodes.get(s.n).label)}</b><br>${esc(s.cap)}`; }
+  const btn=$('#tr-play');
+  btn.textContent = state.trace.playing?'⏸ 暂停':(step>=scen.steps.length-1?'↺ 重播':'▶ 播放链路');
+}
+function stopTracePlay(){
+  state.trace.playing=false;
+  if(state.trace.timer){ clearInterval(state.trace.timer); state.trace.timer=null; }
+}
+function startTracePlay(){
+  const scen=state.trace&&state.trace.scenObj;
+  if(!scen) return;
+  if(state.trace.step>=scen.steps.length-1) state.trace.step=-1;
+  state.trace.playing=true;
+  state.trace.timer=setInterval(()=>{
+    state.trace.step++;
+    if(state.trace.step>=scen.steps.length){ state.trace.step=scen.steps.length-1; stopTracePlay(); }
+    applyTraceStep();
+  }, reducedMotion?600:1300);
+  applyTraceStep();
+}
+$('#tr-play').addEventListener('click',()=>{ state.trace.playing?stopTracePlay():startTracePlay(); applyTraceStep(); });
+$('#tr-prev').addEventListener('click',()=>{ if(!state.trace.scenObj) return; stopTracePlay(); state.trace.step=Math.max(-1,state.trace.step-1); applyTraceStep(); });
+$('#tr-next').addEventListener('click',()=>{ if(!state.trace.scenObj) return; stopTracePlay(); state.trace.step=Math.min(state.trace.scenObj.steps.length-1,state.trace.step+1); applyTraceStep(); });
+let traceFit=false;
+$('#trace-fit').addEventListener('click',()=>{
+  traceFit=!traceFit;
+  const svg=$('#trace-wrap svg'); if(!svg) return;
+  if(traceFit){ svg.setAttribute('data-w',svg.getAttribute('width')); svg.style.width='100%'; svg.style.height='auto'; svg.removeAttribute('width'); }
+  else { svg.style.width=''; svg.style.height=''; if(svg.getAttribute('data-w')) svg.setAttribute('width',svg.getAttribute('data-w')); }
+  $('#trace-fit').textContent=traceFit?'原始大小':'适配宽度';
+});
+$('#trace-close').addEventListener('click',()=>{ stopTracePlay(); $('#modal-trace').hidden=true; });
+$('#modal-trace').addEventListener('click',e=>{ if(e.target.id==='modal-trace'){ stopTracePlay(); $('#modal-trace').hidden=true; } });
+/* ---------------- repos view ---------------- */
+const REPO_TOKENS=['--repo-order','--repo-inventory','--repo-customer','--repo-settlement','--repo-notification','--repo-web','--repo-gateway','--repo-common'];
+function renderRepos(){
+  const totalCross=crossEdgeCount();
+  const stale=REPOS.filter(r=>r.status==='stale').length;
+  $('#repo-tiles').innerHTML=
+    `<div class="tile" style="--tc:var(--accent)"><div class="t-val">${REPOS.length}</div><div class="t-label">接入仓库</div><div class="t-sub">免编译 · tree-sitter</div></div>`+
+    `<div class="tile" style="--tc:var(--mint)"><div class="t-val num">${DB.nodes.size}</div><div class="t-label">图谱节点</div><div class="t-sub">方法级粒度</div></div>`+
+    `<div class="tile" style="--tc:var(--magenta)"><div class="t-val num">${DB.edges.length}</div><div class="t-label">关系边</div><div class="t-sub">调用 / 契约 / 结构</div></div>`+
+    `<div class="tile" style="--tc:var(--amber)"><div class="t-val num">${totalCross}</div><div class="t-label">跨仓契约边</div><div class="t-sub">Feign · MQ · HTTP</div></div>`+
+    `<div class="tile" style="--tc:${stale?'var(--warning)':'var(--success)'}"><div class="t-val num">${stale}</div><div class="t-label">待更新仓库</div><div class="t-sub">${stale?'有新提交未索引':'全部为最新'}</div></div>`;
+  let list=REPOS.filter(r=>{
+    const q=state.repoQuery.toLowerCase();
+    const okQ=!q||r.name.toLowerCase().includes(q)||r.url.toLowerCase().includes(q);
+    const okL=!state.repoLang||r.lang===state.repoLang;
+    return okQ&&okL;
+  });
+  const {key,dir}=state.repoSort;
+  list.sort((a,b)=>{
+    let va,vb;
+    if(key==='nodes'){ va=repoNodeCount(a.id); vb=repoNodeCount(b.id); }
+    else if(key==='edges'){ va=repoEdgeCount(a.id); vb=repoEdgeCount(b.id); }
+    else if(key==='lastIndex'){ va=a.lastIndex; vb=b.lastIndex; }
+    else { va=a.name; vb=b.name; }
+    return (va<vb?-1:va>vb?1:0)*dir;
+  });
+  $('#repo-count-label').textContent=`${list.length} / ${REPOS.length} 个仓库`;
+  $$('table.repos th.sortable').forEach(th=>{
+    th.querySelector('.sort-arrow').textContent = th.dataset.sort===key?(dir>0?'▲':'▼'):'';
+  });
+  const tb=$('#repo-tbody');
+  tb.innerHTML=list.map(r=>{
+    const col=repoColor(r.id);
+    const statusHtml = r.status==='indexed'?`<span class="status-pill indexed"><i></i>已索引</span>`
+      : r.status==='stale'?`<span class="status-pill stale" title="${esc(r.note||'')}"><i></i>待更新</span>`
+      : `<span class="status-pill indexing"><i></i>索引中</span>`;
+    return `<tr data-id="${esc(r.id)}" class="${state.bulk.has(r.id)?'selected':''}">
+      <td><input type="checkbox" class="rowcheck row-check" data-id="${esc(r.id)}" ${state.bulk.has(r.id)?'checked':''} aria-label="选择 ${esc(r.name)}"></td>
+      <td><div class="repo-cell"><span class="repo-avatar" style="background:${col}">${esc(r.name.charAt(0).toUpperCase())}</span>
+        <div style="min-width:0"><div class="rc-name">${esc(r.name)}</div><div class="rc-url">${esc(r.url)}</div></div></div></td>
+      <td class="mono muted">${esc(r.branch)}</td>
+      <td><span class="langchip">${esc(r.lang)}</span></td>
+      <td class="num mono">${repoTestCount(r.id)}</td>
+      <td class="num mono">${repoNodeCount(r.id)}</td>
+      <td class="num mono">${repoEdgeCount(r.id)}</td>
+      <td class="muted" style="white-space:nowrap">${fmtAgo(r.lastIndex)}</td>
+      <td>${statusHtml}</td>
+      <td><div class="row-actions">
+        <button class="iconbtn act-reindex" data-id="${esc(r.id)}" title="重建索引" ${r.status==='indexing'?'disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg></button>
+        <button class="iconbtn act-delete" data-id="${esc(r.id)}" title="移除仓库"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  tb.querySelectorAll('.row-check').forEach(c=>c.addEventListener('change',()=>{
+    if(c.checked) state.bulk.add(c.dataset.id); else state.bulk.delete(c.dataset.id);
+    renderRepos();
+  }));
+  tb.querySelectorAll('.act-reindex').forEach(b=>b.addEventListener('click',()=>reindexRepo(b.dataset.id)));
+  tb.querySelectorAll('.act-delete').forEach(b=>b.addEventListener('click',()=>deleteRepos([b.dataset.id])));
+  const allChecked=list.length>0&&list.every(r=>state.bulk.has(r.id));
+  $('#repo-check-all').checked=allChecked;
+  const bar=$('#bulk-bar');
+  bar.classList.toggle('show',state.bulk.size>0);
+  $('#bulk-count').textContent=state.bulk.size;
+}
+$('#repo-check-all').addEventListener('change',e=>{
+  if(e.target.checked) REPOS.forEach(r=>state.bulk.add(r.id)); else state.bulk.clear();
+  renderRepos();
+});
+$('#bulk-clear').addEventListener('click',()=>{ state.bulk.clear(); renderRepos(); });
+$('#bulk-reindex').addEventListener('click',()=>{
+  const ids=[...state.bulk]; state.bulk.clear();
+  ids.forEach((id,i)=>setTimeout(()=>reindexRepo(id),i*450));
+});
+$('#bulk-delete').addEventListener('click',()=>{ const ids=[...state.bulk]; state.bulk.clear(); deleteRepos(ids); });
+$('#repo-search').addEventListener('input',e=>{ state.repoQuery=e.target.value; renderRepos(); });
+$('#repo-lang-filter').addEventListener('change',e=>{ state.repoLang=e.target.value; renderRepos(); });
+$$('table.repos th.sortable').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.sort;
+  if(state.repoSort.key===k) state.repoSort.dir*=-1; else state.repoSort={key:k,dir:1};
+  renderRepos();
+}));
+function reindexRepo(id){
+  const r=DB.repos.get(id); if(!r||r.status==='indexing') return;
+  r.status='indexing'; renderRepos();
+  post('/api/reindex',{name:id})
+    .then(s=>{ r.status='indexed'; r.lastIndex=Date.now(); r.note=null; r.commit_sha=s.commit; REPO_COMMITS[id]=s.commit; renderRepos(); updateStats(); toast(r.name+' index rebuilt: '+s.parsed+' files · '+s.nodes+' nodes'); })
+    .catch(e=>{ r.status='indexed'; renderRepos(); toast('Rebuild failed: '+e.message,'danger'); });
+}
+function deleteRepos(ids){
+  if(!ids.length) return;
+  toast('Will remove '+ids.length+' repo(s) from the index (irreversible)',{type:'warn',duration:6500,action:{label:'Confirm delete',fn:async()=>{
+    try{
+      for(const id of ids){ await post('/api/remove',{name:id}); state.bulk.delete(id); }
+      await reloadAll(); renderRepos(); toast('Removed from index');
+    }catch(e){ toast('Delete failed: '+e.message,'danger'); }
+  }}});
+}
+/* add repo flow — real server-side indexing */
+$('#repo-add-btn').addEventListener('click',()=>{
+  $('#add-form-body').hidden=false; $('#add-progress-body').hidden=true;
+  $('#add-err').classList.remove('show'); $('#add-url').value=''; $('#add-token').value='';
+  $('#add-done').textContent='Done · view graph';
+  $('#modal-add').hidden=false; $('#add-url').focus();
+});
+$('#add-close').addEventListener('click',()=>$('#modal-add').hidden=true);
+$('#modal-add').addEventListener('click',e=>{ if(e.target.id==='modal-add') $('#modal-add').hidden=true; });
+function termLine(html){
+  const t=$('#add-terminal');
+  const time=new Date().toTimeString().slice(0,8);
+  t.innerHTML+='<div><span class="tl-time">['+time+']</span> '+html+'</div>';
+  t.scrollTop=t.scrollHeight;
+}
+$('#add-submit').addEventListener('click',async ()=>{
+  const url=$('#add-url').value.trim();
+  const err=$('#add-err');
+  if(!/^(https?:\/\/|git@|ssh:\/\/|\/|\.\.?\/)/.test(url)){
+    err.textContent='Enter a local path or Git URL (https://… / git@… / /abs/path)'; err.classList.add('show'); return;
+  }
+  const name=url.split('/').pop().replace(/\.git$/,'').replace(/[^\w-]/g,'')||'new-service';
+  if(DB.repos.has(name)){ err.textContent='Repo '+name+' already indexed'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  const branch=$('#add-branch').value.trim()||'main';
+  $('#add-form-body').hidden=true; $('#add-progress-body').hidden=false;
+  $('#add-terminal').innerHTML=''; $('#add-progress').style.width='30%';
+  $('#add-done').hidden=true; $('#add-status-label').textContent='Server indexing (clone → parse → contracts → stitch)…';
+  termLine('<span class="tl-info">POST /api/analyze</span> '+esc(url));
+  try{
+    const s=await post('/api/analyze',{source:url,branch});
+    $('#add-progress').style.width='100%';
+    termLine('<span class="tl-ok">✓ '+esc(s.repo)+'</span> parsed '+s.parsed+' files · skipped '+s.skipped+' · unresolved '+s.unresolved);
+    termLine('nodes '+s.nodes+' · edges '+s.edges+' · commit '+esc(String(s.commit).slice(0,7)));
+    await reloadAll();
+    $('#add-status-label').innerHTML='<span style="color:var(--success)">✓ '+esc(s.repo)+' joined the graph</span>';
+    $('#add-done').hidden=false;
+  }catch(e){
+    termLine('<span class="tl-warn">✗ '+esc(e.message)+'</span>');
+    $('#add-status-label').textContent='Indexing failed';
+    $('#add-done').hidden=false; $('#add-done').textContent='Close';
+  }
+});
+$('#add-done').addEventListener('click',()=>{
+  $('#modal-add').hidden=true; route('graph');
+  toast('Graph refreshed from live index');
+});
+
+/* ---------------- diff → impact → tests engines ---------------- */
+function parseDiff(text){
+  const changed=new Set(); let file=null;
+  String(text||'').split('\n').forEach(line=>{
+    const f=line.match(/^\+\+\+ b\/(\S+)/); if(f){ file=f[1]; return; }
+    const h=line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+    if(h&&file){
+      const start=parseInt(h[1],10), count=h[2]!=null?parseInt(h[2],10):1;
+      const end=start+Math.max(count,1)-1;
+      DB.nodes.forEach(n=>{ if((n.type==='method'||n.type==='test')&&n.file===file&&n.lines&&n.lines[0]<=end&&n.lines[1]>=start) changed.add(n.id); });
+    }
+  });
+  return [...changed];
+}
+function resolveChanged(p){
+  if(p.diff&&p.diff.trim()) return {source:'custom-diff', methods:parseDiff(p.diff)};
+  const c=COMMITS.find(x=>x.sha===p.commit)||COMMITS[0];
+  return {source:c.sha, msg:c.msg, repo:c.repo, methods:parseDiff(c.diff)};
+}
+function impactOfDiff(p){
+  p=p||{};
+  const confs=p.confs||new Set(['certain','inferred','speculative']);
+  const ch=resolveChanged(p);
+  const affected=new Set(), entryMap=new Map(), truncated=new Map(); let depthCut=0;
+  ch.methods.forEach(mid=>{
+    const r=impactAnalysis(mid,{depth:p.depth||8,confs,fanin:p.fanin!=null?p.fanin:4});
+    if(!r) return;
+    r.affected.forEach(id=>affected.add(id));
+    r.truncated.forEach(t=>truncated.set(t.id,t));
+    depthCut+=r.depthCut;
+    r.paths.forEach(pa=>{
+      const en=DB.nodes.get(pa.entry);
+      const e=entryMap.get(pa.entry)||{entry:pa.entry,kind:pa.entryKind,label:en.label,repo:en.repo,causedBy:[],hops:pa.hops,conf:pa.conf};
+      if(!e.causedBy.includes(mid)) e.causedBy.push(mid);
+      e.hops=Math.min(e.hops,pa.hops);
+      if(confRank(pa.conf)>confRank(e.conf)) e.conf=pa.conf;
+      entryMap.set(pa.entry,e);
+    });
+  });
+  const repos=new Set(); affected.forEach(id=>{ const r=DB.nodes.get(id).repo; if(r!=='external') repos.add(r); });
+  return {
+    source:ch.source, msg:ch.msg||null,
+    changedMethods:ch.methods.map(id=>{ const n=DB.nodes.get(id); return {id,label:n.label,repo:n.repo,lines:n.lines||null}; }),
+    summary:{changed:ch.methods.length,repos:repos.size,entries:entryMap.size,affected:affected.size,truncated:truncated.size},
+    entries:[...entryMap.values()].sort((a,b)=>a.hops-b.hops),
+    affected:[...affected], truncated:[...truncated.values()], depthCut
+  };
+}
+function testsForChange(p){
+  p=p||{};
+  const confs=p.confs||new Set(['certain','inferred']);
+  const fanin=p.fanin!=null?p.fanin:4;
+  const ch=resolveChanged(p);
+  const unit=[], uncovered=[], affected=new Set();
+  ch.methods.forEach(mid=>{
+    const r=impactAnalysis(mid,{depth:p.depth||8,confs,fanin});
+    if(!r) return;
+    r.affected.forEach(id=>affected.add(id));
+    const tests=r.affected.filter(id=>DB.nodes.get(id).type==='test');
+    if(!tests.length){ const n=DB.nodes.get(mid); uncovered.push({id:mid,label:n.label,repo:n.repo}); }
+    tests.forEach(tid=>{
+      const u=unit.find(x=>x.id===tid);
+      if(u){ if(!u.covers.includes(mid)) u.covers.push(mid); }
+      else{
+        const n=DB.nodes.get(tid);
+        const pp=r.paths.find(x=>x.entry===tid);
+        unit.push({id:tid,label:n.label,repo:n.repo,covers:[mid],depth:pp?pp.hops:1});
+      }
+    });
+  });
+  const caseMap=new Map();
+  if(p.includeCases!==false){
+    affected.forEach(id=>{
+      (IDX.inn.get(id)||[]).forEach(e=>{
+        if(e.rel!=='COVERS') return;
+        const c=DB.nodes.get(e.s);
+        if(!c||c.type!=='case') return;
+        const x=caseMap.get(c.id)||{id:c.id,label:c.label,kind:c.caseKind,priority:c.priority,auto:c.auto,covers:[]};
+        if(!x.covers.includes(id)) x.covers.push(id);
+        caseMap.set(c.id,x);
+      });
+    });
+  }
+  const cases=[...caseMap.values()].sort((a,b)=>a.priority.localeCompare(b.priority)||a.id.localeCompare(b.id));
+  const api=cases.filter(c=>c.kind==='api'), ui=cases.filter(c=>c.kind==='ui');
+  return {
+    source:ch.source, changedMethods:ch.methods,
+    unitTests:unit.sort((a,b)=>a.depth-b.depth), uncovered,
+    apiCases:api, uiCases:ui,
+    summary:{changed:ch.methods.length,unit:unit.length,api:api.length,ui:ui.length,uncovered:uncovered.length}
+  };
+}
+function graphStatus(){
+  const repos=REPOS.map(r=>{
+    const methods=[], tests=[];
+    DB.nodes.forEach(n=>{ if(n.repo!==r.id) return; if(n.type==='method') methods.push(n.id); if(n.type==='test') tests.push(n.id); });
+    const covered=new Set();
+    tests.forEach(tid=>{
+      const seen=new Set([tid]), q=[{id:tid,d:0}];
+      while(q.length){
+        const {id,d}=q.shift(); if(d>=6) continue;
+        (IDX.out.get(id)||[]).forEach(e=>{
+          if(e.rel!=='CALLS'||seen.has(e.t)) return;
+          seen.add(e.t); covered.add(e.t); q.push({id:e.t,d:d+1});
+        });
+      }
+    });
+    const cov=methods.filter(m=>covered.has(m)).length;
+    return {repo:r.name, branch:r.branch, indexedCommit:REPO_COMMITS[r.id]||'—', stale:r.status==='stale',
+      nodes:repoNodeCount(r.id), edges:repoEdgeCount(r.id), testMethods:tests.length,
+      staticCoverage:methods.length?Math.round(cov/methods.length*100):0};
+  });
+  let testTotal=0, caseTotal=0;
+  DB.nodes.forEach(n=>{ if(n.type==='test') testTotal++; if(n.type==='case') caseTotal++; });
+  return {
+    mcp:'codeloom-mcp v0.1-prototype',
+    totals:{repos:REPOS.length,nodes:DB.nodes.size,edges:DB.edges.length,crossRepoEdges:crossEdgeCount(),testMethods:testTotal,cases:caseTotal},
+    freshnessWarnings:repos.filter(x=>x.stale).map(x=>x.repo+' 领先索引（'+(DB.repos.get(x.repo).note||'新提交')+'）'),
+    repos
+  };
+}
+
+/* ---------------- global config (gateway prefixes & adapters) ---------------- */
+function gcfgRow(prefix='',strip=1){
+  const row=document.createElement('div');
+  row.className='cfg-row';
+  row.innerHTML='<input class="cfg-prefix mono" placeholder="/api-order" style="flex:1">'
+    +'<input class="cfg-strip mono" type="number" min="0" max="5" value="'+strip+'" style="width:70px" title="strip 段数">'
+    +'<button class="iconbtn cfg-del" title="删除">×</button>';
+  row.querySelector('.cfg-prefix').value=prefix;
+  row.querySelector('.cfg-del').onclick=()=>row.remove();
+  return row;
+}
+async function openGlobalConfig(){
+  $('#gcfg-err').classList.remove('show');
+  $('#gcfg-status').textContent='';
+  let data={global:{},defaults:{}};
+  try{ data=await api('/api/global-config'); }catch(e){ toast('无法加载全局配置：'+e.message,'danger'); return; }
+  const cfg={...(data.defaults||{}),...(data.global||{})};
+  const rows=$('#gcfg-rows'); rows.innerHTML='';
+  for(const r of (cfg.gatewayRouters||[])) rows.appendChild(gcfgRow(r.prefix,r.strip||1));
+  if(!rows.children.length) rows.appendChild(gcfgRow());
+  const json={...cfg}; delete json.gatewayRouters;
+  $('#gcfg-json').value=JSON.stringify(json,null,2);
+  $('#modal-global-config').hidden=false;
+}
+$('#global-config-btn').addEventListener('click',openGlobalConfig);
+$('#gcfg-close').addEventListener('click',()=>$('#modal-global-config').hidden=true);
+$('#modal-global-config').addEventListener('click',e=>{ if(e.target.id==='modal-global-config') $('#modal-global-config').hidden=true; });
+$('#gcfg-add').addEventListener('click',()=>$('#gcfg-rows').appendChild(gcfgRow()));
+$('#gcfg-save').addEventListener('click',async ()=>{
+  const err=$('#gcfg-err');
+  let base={};
+  try{ base=JSON.parse($('#gcfg-json').value||'{}'); }catch(e){ err.textContent='高级配置 JSON 解析失败：'+e.message; err.classList.add('show'); return; }
+  const routers=[];
+  document.querySelectorAll('#gcfg-rows .cfg-row').forEach(r=>{
+    const prefix=(r.querySelector('.cfg-prefix').value||'').trim();
+    if(!prefix) return;
+    routers.push({prefix,strip:parseInt(r.querySelector('.cfg-strip').value,10)||0});
+  });
+  base.gatewayRouters=routers;
+  err.classList.remove('show');
+  const reindex=$('#gcfg-reindex').checked;
+  $('#gcfg-status').textContent=reindex?'保存并重建全部索引中…':'保存中…';
+  $('#gcfg-save').disabled=true;
+  try{
+    const out=await post('/api/global-config',{config:base,reindex});
+    $('#gcfg-status').textContent=reindex?(out.stats||[]).map(s=>s.repo+(s.error?' ✗':' ✓')).join(' · '):'已保存';
+    await reloadAll();
+    toast(reindex?'全局配置已保存，索引已重建':'全局配置已保存');
+  }catch(e){ $('#gcfg-status').textContent='保存失败：'+e.message; }
+  $('#gcfg-save').disabled=false;
+});
+
+/* ---------------- MCP view (console queries the real graph) ---------------- */
+const MCP_TOOLS=[
+  {name:'search_symbol',  desc:'按名称 / FQN / 路径搜索符号', icon:'M21 21l-4.5-4.5M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z'},
+  {name:'find_callers',   desc:'反向追踪调用者（深度 + 置信度）', icon:'M12 19V5M5 12l7-7 7 7'},
+  {name:'find_callees',   desc:'正向追踪被调用方法', icon:'M12 5v14M5 12l7 7 7-7'},
+  {name:'impact_analysis',desc:'变更方法 → 入口链路影响分析', icon:'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'},
+  {name:'cross_repo_trace',desc:'端到端跨仓链路（契约缝合）', icon:'M3 6h6l3 6 3-6h6M3 18h6l3-6'},
+  {name:'graph_query',    desc:'单跳图模式查询（Cypher 子集）', icon:'M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12'},
+  {name:'impact_of_diff', desc:'提交/diff → 变更方法影响并集与入口聚合', icon:'M12 3v3M12 18v3M3 12h3M18 12h3M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'},
+  {name:'tests_for_change',desc:'精准选测：必跑单测 + 回归用例 + uncovered', icon:'M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'},
+  {name:'graph_status',   desc:'索引 commit / 新鲜度 / 静态覆盖率', icon:'M3 3v18h18M7 14l4-4 3 3 5-6'},
+];
+const LABEL_MAP={Method:'method',Type:'type',Endpoint:'endpoint',Topic:'topic',Page:'page',Repository:'repo'};
+function nodeName(n){ return n.label.replace(/\(\)$/,''); }
+function methodOptions(sel, selected){
+  sel.innerHTML='';
+  REPOS.forEach(r=>{
+    const ms=methodsOfRepo(r.id); if(!ms.length) return;
+    const g=document.createElement('optgroup'); g.label=r.name;
+    ms.forEach(n=>{ const o=document.createElement('option'); o.value=n.id; o.textContent=n.label; g.appendChild(o); });
+    sel.appendChild(g);
+  });
+  if(selected) sel.value=selected;
+}
+function mcpSearchParams(){
+  const tool=state.mcp.tool;
+  const get=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  if(tool==='search_symbol') return {query:get('mp-query')};
+  if(tool==='find_callers') return {method:get('mp-method'),depth:parseInt(get('mp-depth'),10)||3,minConfidence:get('mp-conf')};
+  if(tool==='find_callees') return {method:get('mp-method'),depth:parseInt(get('mp-depth'),10)||2};
+  if(tool==='impact_analysis') return {method:get('mp-method'),depth:parseInt(get('mp-depth'),10)||5,fanin:parseInt(get('mp-fanin'),10)||4};
+  if(tool==='cross_repo_trace') return {endpoint:get('mp-endpoint')};
+  if(tool==='graph_query') return {query:get('mp-cypher')};
+  if(tool==='impact_of_diff') return {repo:get('mp-repo'),commit:get('mp-commit'),diff:get('mp-diff')};
+  if(tool==='tests_for_change') return {repo:get('mp-repo'),commit:get('mp-commit'),includeCases:true,confs:new Set(get('mp-spec')==='on'?['certain','inferred','speculative']:['certain','inferred'])};
+  if(tool==='graph_status') return {};
+  return {};
+}
+function mcpExecute(tool, p){
+  if(tool==='search_symbol'){
+    const q=(p.query||'').toLowerCase(); const hits=[];
+    DB.nodes.forEach(n=>{ if(n.type==='repo') return;
+      if(n.label.toLowerCase().includes(q)||(n.fqn||'').toLowerCase().includes(q)||(n.path||'').toLowerCase().includes(q)) hits.push(n); });
+    hits.sort((a,b)=>a.label.length-b.label.length);
+    return {query:p.query,count:hits.length,results:hits.slice(0,12).map(n=>({id:n.id,label:n.label,type:n.type,repo:n.repo,fqn:n.fqn||undefined,doc:n.props&&(n.props.apidoc||n.props.doc)?String(n.props.apidoc||n.props.doc).slice(0,240):undefined}))};
+  }
+  if(tool==='find_callers'||tool==='find_callees'){
+    const forward=tool==='find_callees';
+    const minRank=p.minConfidence==='certain'?0:p.minConfidence==='inferred'?1:2;
+    const seen=new Map([[p.method,0]]); const out=[]; const queue=[{id:p.method,d:0}];
+    while(queue.length){
+      const {id,d}=queue.shift();
+      if(d>=(p.depth||3)) continue;
+      const edges=forward?(IDX.out.get(id)||[]):(IDX.inn.get(id)||[]);
+      edges.forEach(e=>{
+        if(e.rel!=='CALLS') return;
+        if(confRank(e.conf||'certain')>minRank) return;
+        const other=forward?e.t:e.s;
+        if(seen.has(other)) return;
+        seen.set(other,d+1);
+        const n=DB.nodes.get(other);
+        out.push({id:other,label:n.label,repo:n.repo,depth:d+1,confidence:e.conf||'certain',via:e.site||undefined});
+        queue.push({id:other,d:d+1});
+      });
+    }
+    const start=DB.nodes.get(p.method);
+    return {method:p.method,label:start?start.label:undefined,direction:forward?'callees':'callers',depth:p.depth,count:out.length,results:out};
+  }
+  if(tool==='impact_analysis'){
+    const res=impactAnalysis(p.method,{depth:p.depth||8,fanin:p.fanin!=null?p.fanin:4,confs:new Set(['certain','inferred'])});
+    if(!res) return {error:'method not found'};
+    return {changedMethod:res.start,summary:res.summary,
+      paths:res.paths.map(x=>({entry:x.entry,entryKind:x.entryKind,confidence:x.conf,hops:x.hops,chain:x.chain})),
+      truncatedUtilities:res.truncated};
+  }
+  if(tool==='cross_repo_trace'){
+    return clientTrace(p.endpoint||(()=>{const ep=[...DB.nodes.values()].find(n=>n.type==='endpoint'&&(IDX.inn.get(n.id)||[]).some(e=>e.rel==='EXPOSES'));return ep&&ep.id;})());
+  }
+  if(tool==='impact_of_diff'){
+    const confs=p.confs||new Set(['certain','inferred']);
+    const r=impactOfDiff({commit:p.commit,diff:p.diff,confs});
+    return {source:r.source,commitMessage:r.msg,changedMethods:r.changedMethods,summary:r.summary,
+      entries:r.entries.map(e=>({entry:e.entry,kind:e.kind,label:e.label,repo:e.repo,causedBy:e.causedBy,hops:e.hops,confidence:e.conf})),
+      truncatedUtilities:r.truncated};
+  }
+  if(tool==='tests_for_change'){
+    const r=testsForChange({commit:p.commit,diff:p.diff,confs:p.confs,includeCases:p.includeCases});
+    return {source:r.source,summary:r.summary,unitTests:r.unitTests,uncovered:r.uncovered,apiRegression:r.apiCases,uiRegression:r.uiCases};
+  }
+  if(tool==='graph_status') return graphStatus();
+  if(tool==='graph_query'){
+    const re=/^\s*MATCH\s*\((\w+):(\w+)\)\s*(<?)-\[:([A-Z_]+)\]-(>?)\s*\((\w+)(?::(\w+))?\)\s*(?:WHERE\s+(\w+)\.(name|fqn|repo|path)\s*(=|CONTAINS)\s*'([^']*)'\s*)?RETURN\s+(count\(\w+\)|\w+)\s*$/i;
+    const m=(p.query||'').match(re);
+    if(!m) return {error:'解析失败：原型支持单跳模式',syntax:"MATCH (a:Method)-[:CALLS]->(b:Method) WHERE a.name = 'deductStock' RETURN b",hint:'支持 = / CONTAINS 条件，RETURN b 或 count(b)，方向可写 <-[:REL]-'};
+    const [,va,la,lt,rel,gt,vb,lb,wv,wf,op,wval,ret]=m;
+    const wantA=LABEL_MAP[la], wantB=lb?LABEL_MAP[lb]:null;
+    if(!wantA||(lb&&!wantB)) return {error:`未知标签 ${lb||la}`,labels:Object.keys(LABEL_MAP)};
+    const backward=lt==='<'&&gt==='';
+    const matches=[];
+    DB.edges.forEach(e=>{
+      if(e.rel!==rel.toUpperCase()) return;
+      const a=DB.nodes.get(backward?e.t:e.s), b=DB.nodes.get(backward?e.s:e.t);
+      if(!a||!b) return;
+      if(a.type!==wantA||(wantB&&b.type!==wantB)) return;
+      if(wv){
+        const target=wv===va?a:b;
+        const field=wf==='name'?nodeName(target):(target[wf]||'');
+        const ok=op==='='?field===wval:String(field).includes(wval);
+        if(!ok) return;
+      }
+      matches.push({a,b});
+    });
+    const isCount=/^count\(/i.test(ret);
+    const retVar=ret.replace(/^count\(|\)$/gi,'');
+    const picked=matches.map(x=>retVar===va?x.a:x.b);
+    const uniq=[]; const seen=new Set();
+    picked.forEach(n=>{ if(!seen.has(n.id)){ seen.add(n.id); uniq.push(n); } });
+    if(isCount) return {pattern:p.query.trim(),count:uniq.length};
+    return {pattern:p.query.trim(),count:uniq.length,results:uniq.slice(0,20).map(n=>({id:n.id,label:n.label,type:n.type,repo:n.repo}))};
+  }
+  return {error:'unknown tool'};
+}
+function renderMcpParams(){
+  const tool=state.mcp.tool, box=$('#mcp-params');
+  const field=(id,label,inner,hint)=>`<div class="field"><label for="${id}">${label}</label>${inner}${hint?`<span class="hint">${hint}</span>`:''}</div>`;
+  let html='';
+  if(tool==='search_symbol'){
+    html=field('mp-query','查询词',`<input id="mp-query" value="deduct" placeholder="方法名 / 类名 / API 路径">`,`试试 OrderService、/inventory、deduct`);
+  } else if(tool==='find_callers'||tool==='find_callees'||tool==='impact_analysis'){
+    html=field('mp-method','方法',`<select id="mp-method"></select>`);
+    html+=field('mp-depth','深度',`<input id="mp-depth" type="number" value="${tool==='find_callees'?2:tool==='find_callers'?3:8}" min="1" max="12">`);
+    if(tool==='find_callers') html+=field('mp-conf','最低置信度',`<select id="mp-conf"><option value="inferred" selected>inferred</option><option value="certain">certain</option><option value="speculative">speculative</option></select>`);
+    if(tool==='impact_analysis') html+=field('mp-fanin','扇入截断',`<input id="mp-fanin" type="number" value="30" min="1">`);
+  } else if(tool==='cross_repo_trace'){
+    html=field('mp-endpoint','端点 id',`<input id="mp-endpoint" placeholder="ep:POST /api/...">`);
+  } else if(tool==='impact_of_diff'||tool==='tests_for_change'){
+    html=field('mp-repo','仓库',`<select id="mp-repo">${REPOS.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select>`);
+    html+=field('mp-commit','提交',`<select id="mp-commit"></select>`);
+    if(tool==='impact_of_diff') html+=`<div class="field" style="grid-column:1/-1"><label for="mp-diff">或自定义 diff（留空用所选提交）</label><textarea id="mp-diff" rows="4" class="diff-area" placeholder="diff --git a/… b/…&#10;@@ -60,7 +60,9 @@ …"></textarea></div>`;
+    if(tool==='tests_for_change') html+=field('mp-spec','纳入 speculative',`<select id="mp-spec"><option value="off" selected>否</option><option value="on">是</option></select>`);
+  } else if(tool==='graph_status'){
+    html=`<div class="field" style="grid-column:1/-1"><span class="hint">无参数 · 返回各仓索引 commit、新鲜度告警与静态覆盖率（测试反向可达方法占比）</span></div>`;
+  } else if(tool==='graph_query'){
+    html=`<div class="field" style="grid-column:1/-1"><label for="mp-cypher">图模式查询</label><textarea id="mp-cypher" rows="3" class="mono" style="width:100%;resize:vertical">MATCH (m:Method)-[:CALLS]->(n:Method) WHERE m.name = 'deductStock' RETURN n</textarea></div>`;
+  }
+  box.innerHTML=html;
+  const mrepo=box.querySelector('#mp-repo');
+  if(mrepo){ mrepo.onchange=()=>loadCommits(mrepo.value,box.querySelector('#mp-commit')); loadCommits(mrepo.value,box.querySelector('#mp-commit')); }
+  const ms=box.querySelector('#mp-method');
+  if(ms) methodOptions(ms, tool==='impact_analysis'?'inv:InventoryServiceImpl.deductStock':'inv:InventoryServiceImpl.deductStock');
+  const ex=$('#mcp-examples');
+  const examples={
+    search_symbol:['deduct','OrderService','/customers'],
+    impact_of_diff:COMMITS.map(c=>c.sha),
+    tests_for_change:COMMITS.map(c=>c.sha),
+    graph_query:[
+      "MATCH (m:Method)-[:CALLS]->(n:Method) WHERE m.name = 'deductStock' RETURN n",
+      "MATCH (m:Method)-[:CONSUMES]->(e:Endpoint) WHERE e.path CONTAINS '/customers' RETURN m",
+      "MATCH (m:Method)-[:SUBSCRIBES]->(t:Topic) WHERE t.name = 'order-created' RETURN m",
+    ],
+  }[tool];
+  ex.innerHTML=(examples||[]).map(q=>`<button class="fchip" data-q="${esc(q)}">${esc(q.length>52?q.slice(0,52)+'…':q)}</button>`).join('');
+  ex.querySelectorAll('.fchip').forEach(b=>b.addEventListener('click',()=>{
+    const target=box.querySelector('#mp-query')||box.querySelector('#mp-cypher')||box.querySelector('#mp-commit');
+    if(target){ target.value=b.dataset.q; mcpRun(); }
+  }));
+}
+async function mcpRun(){
+  const tool=state.mcp.tool, params=mcpSearchParams();
+  if((tool==='impact_of_diff'||tool==='tests_for_change')&&!params.diff&&params.commit){
+    try{ params.diff=await ensureDiff(params.repo||(REPOS[0]&&REPOS[0].id), params.commit); }
+    catch(e){ $('#mcp-resp-meta').hidden=false; $('#mcp-latency').textContent='—'; const rv=$('#mcp-response'); rv.hidden=false; rv.innerHTML=hlJSON({error:e.message}); return; }
+  }
+  const t0=performance.now();
+  const result=mcpExecute(tool,params);
+  const ms=Math.max(3,Math.round(performance.now()-t0))+Math.floor(Math.random()*22)+6;
+  $('#mcp-resp-meta').hidden=false;
+  $('#mcp-latency').textContent=ms+' ms';
+  const rv=$('#mcp-response'); rv.hidden=false; rv.innerHTML=hlJSON(result);
+  state.mcp.history.unshift({tool,params,ms,result});
+  state.mcp.history=state.mcp.history.slice(0,6);
+  renderMcpHistory();
+}
+function renderMcpHistory(){
+  const box=$('#mcp-history');
+  if(!state.mcp.history.length){ box.innerHTML='<span class="faint" style="font-size:11.5px">暂无记录</span>'; return; }
+  box.innerHTML=state.mcp.history.map((h,i)=>{
+    const arg=h.params.query||h.params.method||h.params.scenario||'';
+    return `<button class="hist-item" data-i="${i}">▸ ${esc(h.tool)}(${esc(String(arg).slice(0,40))})<span class="h-ms">${h.ms} ms</span></button>`;
+  }).join('');
+  box.querySelectorAll('.hist-item').forEach(b=>b.addEventListener('click',()=>{
+    const h=state.mcp.history[parseInt(b.dataset.i,10)];
+    state.mcp.tool=h.tool; $('#mcp-tool-select').value=h.tool;
+    $$('#mcp-tool-list .tool-item').forEach(t=>t.classList.toggle('active',t.dataset.tool===h.tool));
+    renderMcpParams();
+    const set=(id,v)=>{ const el=document.getElementById(id); if(el&&v!=null) el.value=v; };
+    set('mp-query',h.params.query); set('mp-method',h.params.method); set('mp-depth',h.params.depth);
+    set('mp-conf',h.params.minConfidence); set('mp-fanin',h.params.fanin); set('mp-endpoint',h.params.endpoint); set('mp-cypher',h.params.query);
+    mcpRun();
+  }));
+}
+let mcpInited=false;
+function initMcp(){
+  if(mcpInited) return; mcpInited=true;
+  const ep=$('#mcp-endpoint'); if(ep) ep.textContent=location.origin+'/api';
+  const list=$('#mcp-tool-list'), sel=$('#mcp-tool-select');
+  MCP_TOOLS.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tool-item'+(t.name===state.mcp.tool?' active':''); b.dataset.tool=t.name;
+    b.innerHTML=`<span class="ti-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${t.icon}"/></svg></span><span style="min-width:0"><span class="ti-name">${t.name}</span><br><span class="ti-desc">${t.desc}</span></span>`;
+    b.addEventListener('click',()=>{ state.mcp.tool=t.name; sel.value=t.name;
+      $$('#mcp-tool-list .tool-item').forEach(x=>x.classList.toggle('active',x===b)); renderMcpParams(); });
+    list.appendChild(b);
+    const o=document.createElement('option'); o.value=t.name; o.textContent=t.name; sel.appendChild(o);
+  });
+  sel.addEventListener('change',()=>{ state.mcp.tool=sel.value;
+    $$('#mcp-tool-list .tool-item').forEach(x=>x.classList.toggle('active',x.dataset.tool===sel.value)); renderMcpParams(); });
+  $('#mcp-run').addEventListener('click',mcpRun);
+  renderMcpParams();
+}
+$$('.copybtn[data-copy]').forEach(b=>b.addEventListener('click',()=>{
+  const src=document.getElementById(b.dataset.copy);
+  if(src) copyText(src.textContent.trim(),b);
+}));
+
+/* ---------------- agent loop view ---------------- */
+let agentInited=false;
+function initAgent(){
+  if(agentInited) return; agentInited=true;
+  const rs=$('#ag-repo');
+  rs.innerHTML=REPOS.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+  rs.onchange=()=>loadCommits(rs.value,$('#ag-commit'));
+  if(REPOS.length) loadCommits(rs.value||REPOS[0].id,$('#ag-commit'));
+  $('#ag-run').onclick=runAgent;
+}
+function mcpPrefill(tool,params){
+  state.mcp.tool=tool; route('mcp');
+  $('#mcp-tool-select').value=tool;
+  $$('#mcp-tool-list .tool-item').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+  renderMcpParams();
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el&&v!=null) el.value=v; };
+  set('mp-commit',params.commit); set('mp-diff',params.diff);
+  mcpRun();
+}
+async function runAgent(){
+  const btn=$('#ag-run'); btn.disabled=true;
+  const cards=$$('#pipe-rail .pipe-card');
+  cards.forEach(c=>{ c.classList.remove('running','done'); c.querySelector('.pc-req').textContent='…'; c.querySelector('.pc-ms').textContent=''; c.querySelector('.pc-replay').hidden=true; });
+  $('#agent-report').innerHTML='<div class="empty-state"><h3>链路运行中…</h3><p>三个 MCP 工具依次调用本地图索引，产出精准测试报告。</p></div>';
+  const confs=new Set($('#ag-spec').checked?['certain','inferred','speculative']:['certain','inferred']);
+  const base={commit:$('#ag-commit').value, diff:$('#ag-diff').value, confs};
+  if(!base.diff.trim()&&base.commit){
+    try{ base.diff=await ensureDiff($('#ag-repo').value, base.commit); }
+    catch(e){ toast('无法获取 commit diff：'+e.message,'danger'); btn.disabled=false; return; }
+  }
+  if(!base.diff.trim()){ toast('请选择提交或粘贴 unified diff','warn'); btn.disabled=false; return; }
+  const steps=[
+    {tool:'impact_of_diff', params:{commit:base.commit,diff:base.diff,confs},
+      fn:p=>impactOfDiff(p), req:p=>`commit=${p.commit||'custom-diff'} · depth=8 · fanin=4`,
+      out:r=>`<b>${r.summary.changed}</b> 变更方法 → <b>${r.summary.entries}</b> 入口 · 波及 <b>${r.summary.repos}</b> 服务`},
+    {tool:'tests_for_change', params:{commit:base.commit,diff:base.diff,confs,includeCases:$('#ag-cases').checked},
+      fn:p=>testsForChange(p), req:p=>`changed=${p.commit||'custom'} · cases=${p.includeCases?'on':'off'}`,
+      out:r=>`单测 <b>${r.summary.unit}</b> · API <b>${r.summary.api}</b> · UI <b>${r.summary.ui}</b> · uncovered <b>${r.summary.uncovered}</b>`},
+    {tool:'graph_status', params:{},
+      fn:()=>graphStatus(), req:()=>'no params · freshness + coverage',
+      out:r=>`<b>${r.totals.repos}</b> 仓索引 · 新鲜度告警 <b>${r.freshnessWarnings.length}</b> · 用例 <b>${r.totals.cases}</b>`},
+  ];
+  const results=[];
+  for(let i=0;i<steps.length;i++){
+    const card=cards[i];
+    card.classList.add('running');
+    card.querySelector('.pc-req').textContent=steps[i].req(steps[i].params);
+    await sleep(reducedMotion?40:430);
+    const t0=performance.now();
+    const res=steps[i].fn(steps[i].params);
+    const ms=Math.max(2,Math.round(performance.now()-t0))+4+Math.floor(Math.random()*14);
+    results.push(res);
+    card.classList.remove('running'); card.classList.add('done');
+    card.querySelector('.pc-out').innerHTML=steps[i].out(res);
+    card.querySelector('.pc-ms').textContent=ms+' ms · local index';
+    const rp=card.querySelector('.pc-replay'); rp.hidden=false;
+    rp.onclick=()=>mcpPrefill(steps[i].tool,steps[i].params);
+  }
+  state.agent={results};
+  renderAgentReport(results[0],results[1],results[2]);
+  btn.disabled=false;
+  toast(`变更报告已生成：必跑单测 ${results[1].summary.unit} · 回归用例 ${results[1].summary.api+results[1].summary.ui} · uncovered ${results[1].summary.uncovered}`);
+}
+function renderAgentReport(imp,tst,st){
+  const box=$('#agent-report');
+  const tag=(txt,color)=>`<span class="tag" style="color:${color};border-color:${color}55;background:${color}12">${esc(txt)}</span>`;
+  const chips=ids=>`<span class="cover-chips">${ids.map(id=>{ const n=DB.nodes.get(id); return n?`<button class="cover-chip" data-id="${esc(id)}">${esc(n.label)}</button>`:''; }).join('')}</span>`;
+  const tl=(v,l,c,s)=>`<div class="tile" style="--tc:${c}"><div class="t-val num">${v}</div><div class="t-label">${l}</div><div class="t-sub">${s}</div></div>`;
+  let html=`<div class="tiles">`
+    + tl(imp.summary.changed,'变更方法','var(--danger)',imp.source)
+    + tl(imp.summary.repos,'波及服务','var(--accent)','影响并集去重')
+    + tl(tst.summary.unit,'必跑单测','var(--lime)','静态反向可达')
+    + tl(tst.summary.api,'API 回归','var(--magenta)','用例桥接')
+    + tl(tst.summary.ui,'UI 回归','var(--violet)','页面级用例')
+    + tl(tst.summary.uncovered,'uncovered','var(--warning)','无单测可达 = 风险')
+    + `</div>`;
+  html+='<div class="report-sec"><h3>变更方法 <span class="cnt">'+imp.changedMethods.length+' 个 · 由 diff 解析</span></h3><div class="rtable-wrap"><table class="rtable"><thead><tr><th>方法</th><th>所属仓库</th><th>行号</th><th></th></tr></thead><tbody>'
+    + imp.changedMethods.map(m=>{ const n=DB.nodes.get(m.id)||{}; return '<tr><td class="mono">'+esc(qualLabel(n))+'</td><td class="muted mono" style="font-size:11px">'+esc(n.repo||'')+'</td><td class="num mono">'+(m.lines?m.lines[0]+'-'+m.lines[1]:'—')+'</td><td><button class="btn sm" data-focus="'+esc(m.id)+'">详情</button></td></tr>'; }).join('')
+    + '</tbody></table></div></div>';
+  html+=`<div class="card" style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px">
+    <span class="sec-label">索引可信度</span>
+    <span class="mono muted">${st.totals.repos} 仓 · ${st.totals.nodes} 节点 · 测试方法 ${st.totals.testMethods} · 用例 ${st.totals.cases}</span>
+    ${st.freshnessWarnings.length?`<span style="color:var(--warning)">⚠ ${esc(st.freshnessWarnings.join('；'))} — 影响结论可能滞后</span>`:`<span style="color:var(--success)">✓ 全部仓库索引为最新</span>`}
+    <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="ag-copy">复制报告 JSON</button></span>
+  </div>`;
+  html+=`<div class="report-sec"><h3>影响入口 <span class="cnt">${imp.entries.length} 个 · 按跳数排序</span></h3><div class="rtable-wrap"><table class="rtable"><thead><tr><th>入口</th><th>类型</th><th>触发变更</th><th>跳数</th><th>置信度</th></tr></thead><tbody>`
+    + imp.entries.map(e=>{
+      const ec=cssVar(ENTRY_COLOR[e.kind]||'--fg-faint'), cc=cssVar(CONF_META[e.conf].color);
+      return `<tr><td><span class="mono">${esc(e.label)}</span><div class="faint mono" style="font-size:10px">${esc(e.repo)}</div></td><td>${tag(ENTRY_LABEL[e.kind]||e.kind,ec)}</td><td>${chips(e.causedBy)}</td><td class="num mono">${e.hops}</td><td><span style="display:inline-flex;align-items:center;gap:6px"><span class="conf-dot" style="background:${cc}"></span>${e.conf}</span></td></tr>`;
+    }).join('')
+    + `</tbody></table></div></div>`;
+  html+=`<div class="report-sec"><h3>必跑单测 <span class="cnt">${tst.unitTests.length} 个 · 测试代码入图后反向遍历得出</span></h3>`
+    + (tst.unitTests.length?`<div class="rtable-wrap"><table class="rtable"><thead><tr><th>测试方法</th><th>仓库</th><th>覆盖变更</th><th>深度</th></tr></thead><tbody>`
+      + tst.unitTests.map(u=>`<tr><td class="mono">${esc(u.label)}</td><td class="muted mono" style="font-size:11px">${esc(u.repo)}</td><td>${chips(u.covers)}</td><td class="num mono">${u.depth}</td></tr>`).join('')
+      + `</tbody></table></div>`:`<div class="empty-state" style="padding:20px"><p>无单测可达变更方法</p></div>`)
+    + `</div>`;
+  const allCases=[...tst.apiCases,...tst.uiCases];
+  html+=`<div class="report-sec"><h3>回归用例 <span class="cnt">API ${tst.apiCases.length} · UI ${tst.uiCases.length} · 桥接 testcase-generator / classify 资产</span></h3>`
+    + (allCases.length?`<div class="rtable-wrap"><table class="rtable"><thead><tr><th>用例</th><th>类型</th><th>优先级</th><th>执行路由</th><th>覆盖对象</th></tr></thead><tbody>`
+      + allCases.map(c=>{
+        const kc=c.kind==='ui'?cssVar('--violet'):cssVar('--magenta');
+        const pc=c.priority==='P0'?cssVar('--danger'):c.priority==='P1'?cssVar('--warning'):cssVar('--fg-faint');
+        const ac=c.auto==='ui-partial'?cssVar('--warning'):cssVar('--success');
+        return `<tr><td class="mono">${esc(c.label)}</td><td>${tag(c.kind==='ui'?'UI':'API',kc)}</td><td>${tag(c.priority,pc)}</td><td>${tag(c.auto,ac)}</td><td>${chips(c.covers)}</td></tr>`;
+      }).join('')
+      + `</tbody></table></div>`:`<div class="empty-state" style="padding:20px"><p>未桥接到回归用例（用例桥接关闭，或变更未触及契约面）</p></div>`)
+    + `</div>`;
+  html+= tst.uncovered.length
+    ? `<div class="report-sec"><div class="uncovered-card"><h3>⚠ uncovered 风险 · ${tst.uncovered.length} 个变更方法无单测可达</h3>`
+      + tst.uncovered.map(u=>`<div style="display:flex;gap:10px;align-items:center;font-size:12.5px;flex-wrap:wrap"><span class="mono">${esc(u.label)}</span><span class="faint mono" style="font-size:11px">${esc(u.repo)}</span><button class="btn sm" data-focus="${esc(u.id)}" style="margin-left:auto">查看</button></div>`).join('')
+      + `<div class="faint" style="font-size:11px">建议：评审要求补测，或显式标记为接受风险。</div></div></div>`
+    : `<div class="report-sec"><div class="card" style="border-color:color-mix(in srgb,var(--success) 40%,transparent);background:color-mix(in srgb,var(--success) 7%,var(--surface));font-size:12.5px;color:var(--success)">✓ 全部变更方法均有单测可达</div></div>`;
+  box.innerHTML=html;
+  box.querySelectorAll('.cover-chip').forEach(b=>b.addEventListener('click',()=>{ focusNode(b.dataset.id); }));
+  box.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>{ focusNode(b.dataset.focus); }));
+  $('#ag-copy').addEventListener('click',e=>copyText(JSON.stringify({source:imp.source,impact:imp.summary,entries:imp.entries,tests:tst.summary,unitTests:tst.unitTests,uncovered:tst.uncovered,apiRegression:tst.apiCases,uiRegression:tst.uiCases,trust:{freshnessWarnings:st.freshnessWarnings}},null,2),e.currentTarget));
+}
+
+/* ---------------- refresh ---------------- */
+$('#refresh-btn').addEventListener('click',async()=>{
+  try{ await reloadAll(); toast('索引快照已刷新'); }
+  catch(e){ toast('刷新失败：'+e.message,'danger'); }
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&REPOS.length){ reloadAll().catch(()=>{}); }
+});
+
+/* ---------------- boot ---------------- */
+(async function boot(){
+  $('#repo-focus').addEventListener('change',e=>applyRepoFocus(e.target.value));
+  const bt=performance.now();
+  try{ await loadGraphFromServer(); }
+  catch(e){ toast('Cannot reach codeloom serve: '+e.message,'danger'); }
+  console.info('[codeloom] load+index ms', Math.round(performance.now()-bt));
+  if(!REPOS.length){ route('repos'); toast('Index is empty — add your first repository','warn'); }
+  else { fillRepoFocus(); applyRepoFocus(defaultFocus(),false); route(location.hash.slice(1)||'graph',false); }
+})();
+</script>

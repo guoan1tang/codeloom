@@ -1,0 +1,17 @@
+{
+  "edges": [
+    { "s": "ProductService.find", "t": "table:t_product", "rel": "READS_TABLE" },
+    { "s": "ProductService.save", "t": "table:t_product", "rel": "WRITES_TABLE" },
+    { "s": "ProductXmlMapper.selectById", "t": "table:t_product", "rel": "READS_TABLE" },
+    { "s": "ProductXmlMapper.touch", "t": "table:t_product", "rel": "WRITES_TABLE" },
+    { "s": "ProductXmlMapper.list", "t": "table:t_product", "rel": "READS_TABLE" },
+    { "s": "JpaProductRepository.countAudit", "t": "table:t_product_audit", "rel": "READS_TABLE" },
+    { "s": "ProductService.byXml", "t": "ProductXmlMapper.selectById", "rel": "CALLS", "conf": "certain" },
+    { "s": "ProductService.audit", "t": "JpaProductRepository.countAudit", "rel": "CALLS", "conf": "certain" }
+  ],
+  "nodes": [
+    { "id": "ProductEntity", "type": "type" },
+    { "id": "ProductMapper", "props": { "kind": "interface" } }
+  ],
+  "summary": { "repos": 1, "tables": 2, "endpoints": 0, "http": 0 }
+}

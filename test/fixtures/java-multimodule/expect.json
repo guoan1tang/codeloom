@@ -1,0 +1,15 @@
+{
+  "edges": [
+    { "s": "OrderController.create", "t": "ep:POST /api/order/create", "rel": "EXPOSES" },
+    { "s": "OrderController.create", "t": "OrderService.createOrder", "rel": "CALLS", "conf": "certain" },
+    { "s": "OrderService.createOrder", "t": "OrderServiceImpl.createOrder", "rel": "CALLS", "conf": "inferred" },
+    { "s": "OrderServiceImpl.createOrder", "t": "OrderRepository.save", "rel": "CALLS", "conf": "certain" },
+    { "s": "OrderServiceImpl.price", "t": "MoneyUtil.round", "rel": "CALLS", "conf": "certain" },
+    { "s": "OrderServiceImplTest.testCreate", "t": "OrderServiceImpl.createOrder", "rel": "CALLS", "conf": "certain" }
+  ],
+  "nodes": [
+    { "id": "MoneyUtil", "type": "type", "props": { "kind": "class" } },
+    { "id": "OrderServiceImplTest.testCreate", "type": "test", "props": { "entry": "test" } }
+  ],
+  "summary": { "repos": 1, "endpoints": 1, "http": 1, "test": 1 }
+}

@@ -1,0 +1,94 @@
+{
+  "edges": [
+    {
+      "s": "OrderController.create",
+      "t": "ep:POST /orders/create",
+      "rel": "EXPOSES"
+    },
+    {
+      "s": "OrderController.get",
+      "t": "ep:GET /orders/{id}",
+      "rel": "EXPOSES"
+    },
+    {
+      "s": "OrderController.delete",
+      "t": "ep:DELETE /orders/{id}",
+      "rel": "EXPOSES"
+    },
+    {
+      "s": "OrderController.search",
+      "t": "ep:GET /orders/search",
+      "rel": "EXPOSES"
+    },
+    {
+      "s": "OrderController.create",
+      "t": "OrderService.createOrder",
+      "rel": "CALLS",
+      "conf": "certain"
+    },
+    {
+      "s": "OrderService.createOrder",
+      "t": "OrderServiceImpl.createOrder",
+      "rel": "CALLS",
+      "conf": "inferred"
+    },
+    {
+      "s": "OrderController.get",
+      "t": "OrderService.findById",
+      "rel": "CALLS",
+      "conf": "certain"
+    },
+    {
+      "s": "OrderServiceImpl.createOrder",
+      "t": "OrderRepository.save",
+      "rel": "CALLS",
+      "conf": "certain"
+    },
+    {
+      "s": "OrderServiceImpl.findById",
+      "t": "OrderRepository.findById",
+      "rel": "CALLS",
+      "conf": "certain"
+    },
+    {
+      "s": "OrderControllerTest.testCreateApi",
+      "t": "OrderController.create",
+      "rel": "CALLS",
+      "conf": "certain"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "OrderController",
+      "type": "type",
+      "props": {
+        "controller": true
+      }
+    },
+    {
+      "id": "OrderServiceImpl",
+      "type": "type",
+      "props": {
+        "kind": "class"
+      }
+    },
+    {
+      "id": "OrderServiceImpl.createOrder",
+      "props": {
+        "doc": "~创建订单并落库"
+      }
+    },
+    {
+      "id": "OrderController.create",
+      "props": {
+        "entry": "http"
+      }
+    }
+  ],
+  "summary": {
+    "repos": 1,
+    "endpoints": 4,
+    "http": 4,
+    "test": 1
+  }
+}

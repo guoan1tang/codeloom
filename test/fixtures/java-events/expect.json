@@ -1,0 +1,16 @@
+{
+  "edges": [
+    { "s": "RocketPaidListener.onMessage", "t": "topic:order-paid", "rel": "SUBSCRIBES" },
+    { "s": "RabbitStockListener.process", "t": "topic:stock-sync-queue", "rel": "SUBSCRIBES" },
+    { "s": "StockAlertHandler.handle", "t": "topic:stock-alert-queue", "rel": "SUBSCRIBES" },
+    { "s": "AuditLogListener.consume", "t": "topic:audit-log", "rel": "SUBSCRIBES" },
+    { "s": "OrderEventPublisher.publishPaid", "t": "topic:order-paid", "rel": "PRODUCES" },
+    { "s": "OrderEventPublisher.publishExchange", "t": "topic:ORDER_EXCHANGE", "rel": "PRODUCES" }
+  ],
+  "nodes": [
+    { "id": "StockSyncJob.run", "type": "method", "props": { "entry": "job", "jobHandler": "stock-sync" } },
+    { "id": "DailySettleJob.settle", "props": { "cron": "0 0 2 * * ?" } },
+    { "id": "RocketPaidListener.onMessage", "props": { "entry": "mq" } }
+  ],
+  "summary": { "repos": 1, "mq": 4, "job": 2, "topics": 5, "http": 0 }
+}

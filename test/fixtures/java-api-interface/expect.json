@@ -1,0 +1,15 @@
+{
+  "edges": [
+    { "s": "BillingController.charge", "t": "ep:POST /billing/charge", "rel": "EXPOSES" },
+    { "s": "BillingController.query", "t": "ep:GET /billing/{id}", "rel": "EXPOSES" },
+    { "s": "BillingApi.charge", "t": "ep:POST /billing/charge", "rel": "CONSUMES" },
+    { "s": "BillingApi.query", "t": "ep:GET /billing/{id}", "rel": "CONSUMES" },
+    { "s": "BillingController.charge", "t": "BillingService.charge", "rel": "CALLS", "conf": "certain" }
+  ],
+  "nodes": [
+    { "id": "BillingController", "type": "type", "props": { "controller": true } },
+    { "id": "BillingApi", "type": "type", "props": { "kind": "interface" } },
+    { "id": "BillingController.charge", "props": { "entry": "http" } }
+  ],
+  "summary": { "repos": 1, "endpoints": 2, "http": 2, "tables": 0 }
+}

@@ -1,0 +1,6 @@
+{
+  "gatewayRouters": [
+    { "prefix": "/api-order", "strip": 1 },
+    { "prefix": "/api-inventory", "strip": 1 }
+  ]
+}

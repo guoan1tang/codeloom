@@ -1,0 +1,45 @@
+{
+  "name": "codeloom",
+  "version": "0.1.0",
+  "description": "Code knowledge graph for agents: method-level call graph + cross-repo contract stitching, MCP-native, zero native dependencies",
+  "type": "module",
+  "bin": {
+    "codeloom": "src/cli.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "codeloom": "node src/cli.js",
+    "serve": "node src/cli.js serve"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "tree-sitter-wasms": "0.1.13",
+    "web-tree-sitter": "0.25.2",
+    "zod": "^3.25.0"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "knowledge-graph",
+    "call-graph",
+    "mcp",
+    "tree-sitter",
+    "code-intelligence",
+    "impact-analysis"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guoan1tang/codeloom.git"
+  },
+  "homepage": "https://github.com/guoan1tang/codeloom#readme",
+  "bugs": {
+    "url": "https://github.com/guoan1tang/codeloom/issues"
+  }
+}

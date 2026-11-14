@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapper namespace="com.acme.lim.dynamic.DynamicMapper">
+  <select id="selectByTable" resultType="java.lang.String">
+    select * from ${table} where id = #{id}
+  </select>
+</mapper>

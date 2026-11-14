@@ -1,6 +1,6 @@
 {
   "name": "codeloom-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Code knowledge graph for agents: method-level call graph + cross-repo contract stitching, MCP-native, zero native dependencies",
   "type": "module",
   "bin": {

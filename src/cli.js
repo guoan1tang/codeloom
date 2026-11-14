@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // CodeLoom CLI — zero native deps. Install: npx codeloom analyze <repo>
+import fs from 'node:fs';
 import { openDb, defaultDbPath, loadGraph, deleteRepo } from './db.js';
 import { ingestRepo } from './ingest.js';
 import { graphStatus } from './graph.js';
@@ -76,7 +77,10 @@ async function main() {
     deleteRepo(db, name);
     console.log(`✓ removed ${name}`);
   } else {
-    console.error('unknown command: ' + cmd);
+    const looksLikeRepo = fs.existsSync(cmd) || /^(https?:\/\/|git@)/.test(cmd) || cmd.endsWith('.git');
+    console.error(looksLikeRepo
+      ? `unknown command: ${cmd} — did you mean \`codeloom analyze ${cmd}\`?`
+      : 'unknown command: ' + cmd);
     console.log(HELP);
     process.exit(1);
   }

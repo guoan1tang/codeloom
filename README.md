@@ -3,6 +3,7 @@
 简体中文 | [English](README.en.md)
 
 [![CI](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/guoan1tang/codeloom/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/codeloom-cli)](https://www.npmjs.com/package/codeloom-cli)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 面向 Agent 的代码知识图谱。把任意 Git 仓库索引成方法级调用图，跨仓库拼接服务契约（Feign / HTTP / MQ），再通过 MCP 交给编码 Agent 使用。
@@ -13,7 +14,14 @@
 
 需要 Node >= 22.13 与 Git。
 
-`codeloom-cli` npm 包尚未发布，暂时直接从 GitHub 安装：
+```bash
+npx codeloom-cli analyze https://github.com/you/your-service.git   # 也可以传本地路径
+claude mcp add codeloom -- npx -y codeloom-cli mcp
+```
+
+或全局安装：`npm i -g codeloom-cli`。
+
+### 不走 npm（直接从 GitHub 安装）
 
 ```bash
 npx -y github:guoan1tang/codeloom analyze <path|git-url>
@@ -21,14 +29,6 @@ claude mcp add codeloom -- npx -y github:guoan1tang/codeloom mcp
 ```
 
 这种方式会 clone 仓库并用 Node 运行，不需要 registry 账号。
-
-npm 包发布后：
-
-```bash
-npx codeloom-cli analyze https://github.com/you/your-service.git   # 也可以传本地路径
-claude mcp add codeloom -- npx -y codeloom-cli mcp
-npm i -g codeloom-cli
-```
 
 ## Web 界面
 

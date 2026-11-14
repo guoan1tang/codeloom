@@ -69,16 +69,19 @@ function collectData(g, ids) {
   return { tables, caches };
 }
 
-function traceEndpoint(g, epId) {
+function traceEndpoint(g, epId, { depth = 3 } = {}) {
   const ep = g.nodes.get(epId);
   if (!ep || ep.type !== 'endpoint') return { error: 'endpoint not found: ' + epId };
+  const d = Math.max(1, Math.min(6, Number(depth) || 3));
+  const LIMIT = 40;
+  const walk = (id, forward) => traverse(g, id, { depth: d, forward, minConf: 'speculative' });
   const providers = [], consumers = [], topics = [];
   for (const e of g.inn.get(epId) || []) {
     if (e.rel === 'EXPOSES') {
       const m = g.nodes.get(e.s);
       providers.push({
         method: m.id, label: m.label, repo: m.repo, ...nodeBrief(g, m.id),
-        callees: withBrief(g, traverse(g, m.id, { depth: 2, forward: true }).slice(0, 12)),
+        callees: withBrief(g, walk(m.id, true).slice(0, LIMIT)),
       });
       for (const out of g.out.get(m.id) || []) if (out.rel === 'PRODUCES') topics.push(collectTopic(g, out.t));
     }
@@ -86,17 +89,17 @@ function traceEndpoint(g, epId) {
       const m = g.nodes.get(e.s);
       consumers.push({
         method: m.id, label: m.label, repo: m.repo, client: e.rel, ...nodeBrief(g, m.id),
-        callers: withBrief(g, traverse(g, m.id, { depth: 2 }).slice(0, 12)),
+        callers: withBrief(g, walk(m.id, false).slice(0, LIMIT)),
       });
     }
   }
   const dataIds = new Set();
   for (const p of providers) {
     dataIds.add(p.method);
-    for (const c of traverse(g, p.method, { depth: 3, forward: true })) dataIds.add(c.id);
+    for (const c of walk(p.method, true)) dataIds.add(c.id);
   }
   const { tables, caches } = collectData(g, dataIds);
-  return { endpoint: epId, path: ep.props?.path, providers, consumers, topics, tables, caches };
+  return { endpoint: epId, path: ep.props?.path, depth: d, providers, consumers, topics, tables, caches };
 }
 function collectTopic(g, tid) {
   const t = g.nodes.get(tid);
@@ -202,16 +205,19 @@ export function createServer(dbPath = defaultDbPath()) {
   });
 
   server.registerTool('cross_repo_trace', {
-    description: 'Contract-level trace around an HTTP endpoint: providers, consumers (Feign / frontend), and MQ topics stitched across repositories. The endpoint may be given as a node id, a path fragment or a label.',
-    inputSchema: { endpoint: z.string().describe('endpoint id ("ep:POST /orders"), path fragment ("/orders/pay") or label ("POST /orders/pay")') },
-  }, async ({ endpoint }) => {
+    description: 'Contract-level trace around an HTTP endpoint: providers, consumers (Feign / frontend), MQ topics and the tables / caches touched along the chain. Walks up to `depth` CALLS hops, including speculative interface dispatch. The endpoint may be given as a node id, a path fragment or a label.',
+    inputSchema: {
+      endpoint: z.string().describe('endpoint id ("ep:POST /orders"), path fragment ("/orders/pay") or label ("POST /orders/pay")'),
+      depth: z.number().min(1).max(6).optional().describe('call depth for callees and table/cache collection (default 3, max 6)'),
+    },
+  }, async ({ endpoint, depth }) => {
     const g = G();
     const id = resolveEndpoint(g, endpoint);
     if (!id) return json({
       error: 'endpoint not found: ' + endpoint,
       hint: 'pass an endpoint id ("ep:POST /orders"), a path fragment ("/orders/pay") or a label ("POST /orders/pay")',
     });
-    return json(traceEndpoint(g, id));
+    return json(traceEndpoint(g, id, { depth }));
   });
 
   server.registerTool('graph_query', {

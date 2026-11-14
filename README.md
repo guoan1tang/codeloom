@@ -135,7 +135,7 @@ codeloom serve [--port 3111] [--host 127.0.0.1]
 | `search_symbol` | 按名称、FQN 或路径查找方法 / 类型 / 端点 / Topic / 页面 / 测试 |
 | `find_callers` / `find_callees` | 带深度限制的调用遍历，可按置信度过滤 |
 | `impact_analysis` | 改动方法 → 入口点（HTTP、页面、MQ 消费、Job、测试） |
-| `cross_repo_trace` | 围绕某个端点的提供方 / 消费方 / Topic 拼接，返回方法注释、文件行号，以及链路读写的数据表与缓存 |
+| `cross_repo_trace` | 围绕某个端点的提供方 / 消费方 / Topic 拼接，返回方法注释、文件行号，以及链路读写的数据表与缓存（`depth` 1–6 可调） |
 | `graph_query` | 单跳 Cypher 子集：`MATCH (a:Method)-[:CALLS]->(b) WHERE a.name='x' RETURN b` |
 | `impact_of_diff` | 统一 diff（或本地仓库中的某个提交）→ 按入口点批量评估影响 |
 | `tests_for_change` | 精确测试选择：单测 + 桥接的接口 / UI 用例 + 未覆盖风险 |

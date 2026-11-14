@@ -283,6 +283,8 @@ test('MCP server: 9 tools, real answers over stdio-shaped transport', async () =
   assert.ok(trace.providers[0].callees.every(c => c.file && c.line), 'callees carry source location');
   const fuzzy = await call('cross_repo_trace', { endpoint: 'POST /inventory/deduct' });
   assert.ok(fuzzy.providers.length >= 1, 'trace resolves a human-readable endpoint');
+  const deep = await call('cross_repo_trace', { endpoint: 'POST /inventory/deduct', depth: 4 });
+  assert.equal(deep.depth, 4, 'trace honours the depth parameter');
   await client.close();
   await server.close();
 });

@@ -42,6 +42,14 @@ function nodeBrief(g, id) {
 }
 const withBrief = (g, results) => results.map(r => ({ ...r, ...nodeBrief(g, r.id) }));
 
+// Accept a node id, a path fragment ("/orders/pay") or a label ("POST /orders/pay")
+// so agents can trace without knowing the internal endpoint id.
+function resolveEndpoint(g, ref) {
+  if (g.nodes.has(ref) && g.nodes.get(ref).type === 'endpoint') return ref;
+  const hits = searchSymbols(g, String(ref).replace(/^ep:/, ''), 20).filter(n => n.type === 'endpoint');
+  return hits[0]?.id || null;
+}
+
 function traceEndpoint(g, epId) {
   const ep = g.nodes.get(epId);
   if (!ep || ep.type !== 'endpoint') return { error: 'endpoint not found: ' + epId };
@@ -155,9 +163,17 @@ export function createServer(dbPath = defaultDbPath()) {
   });
 
   server.registerTool('cross_repo_trace', {
-    description: 'Contract-level trace around an HTTP endpoint: providers, consumers (Feign / frontend), and MQ topics stitched across repositories.',
-    inputSchema: { endpoint: z.string().describe('endpoint node id, e.g. "ep:POST /orders"') },
-  }, async ({ endpoint }) => json(traceEndpoint(G(), endpoint)));
+    description: 'Contract-level trace around an HTTP endpoint: providers, consumers (Feign / frontend), and MQ topics stitched across repositories. The endpoint may be given as a node id, a path fragment or a label.',
+    inputSchema: { endpoint: z.string().describe('endpoint id ("ep:POST /orders"), path fragment ("/orders/pay") or label ("POST /orders/pay")') },
+  }, async ({ endpoint }) => {
+    const g = G();
+    const id = resolveEndpoint(g, endpoint);
+    if (!id) return json({
+      error: 'endpoint not found: ' + endpoint,
+      hint: 'pass an endpoint id ("ep:POST /orders"), a path fragment ("/orders/pay") or a label ("POST /orders/pay")',
+    });
+    return json(traceEndpoint(g, id));
+  });
 
   server.registerTool('graph_query', {
     description: 'Single-hop graph pattern query (Cypher subset): MATCH (a:Label)-[:REL]->(b:Label) WHERE a.name = \'x\' RETURN b | count(b).',

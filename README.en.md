@@ -40,6 +40,33 @@ Click 「链路」 on any API to see the stitched cross-repo contract (frontend 
 
 ![Cross-repo chain](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
 
+## Use with agents (MCP)
+
+The MCP server exposes 9 tools over stdio against the same local graph. One line in Claude Code:
+
+```bash
+claude mcp add codeloom -- npx -y codeloom-cli mcp
+```
+
+Other MCP clients (Cursor, Claude Desktop, …) use a JSON config:
+
+```json
+{
+  "mcpServers": {
+    "codeloom": { "command": "npx", "args": ["-y", "codeloom-cli", "mcp"] }
+  }
+}
+```
+
+Then just ask:
+
+- "What APIs, pages and tests are affected if I change `OrderService.payOrder`?"
+- "Who consumes `POST /inventory/deduct`, and how does the cross-repo call get there?"
+- "Turn the current git diff into a test checklist" (`impact_of_diff` → `tests_for_change` → `graph_status`)
+- "Which methods read or write `t_order`? Who uses the `order` cache key?"
+
+The agent gets method-level call chains, contract edges (Feign / HTTP / MQ) and data-layer edges (tables / caches), each carrying a confidence level (certain / inferred / speculative) so uncertain hops are stated as such. Full tool list under [MCP tools](#mcp-tools).
+
 ## Install
 
 Requires Node >= 22.13 and Git. The `npx` flow above needs no install; you can also install globally:

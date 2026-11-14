@@ -35,6 +35,33 @@ claude mcp add codeloom -- npx -y codeloom-cli mcp
 
 ![跨仓库链路](https://raw.githubusercontent.com/guoan1tang/codeloom/main/docs/screenshots/chain.png)
 
+## 给 Agent 使用（MCP）
+
+MCP 服务通过 stdio 暴露 9 个工具，读取同一份本地图谱。Claude Code 一行接入：
+
+```bash
+claude mcp add codeloom -- npx -y codeloom-cli mcp
+```
+
+其他 MCP 客户端（Cursor、Claude Desktop 等）用 JSON 配置：
+
+```json
+{
+  "mcpServers": {
+    "codeloom": { "command": "npx", "args": ["-y", "codeloom-cli", "mcp"] }
+  }
+}
+```
+
+接好后可以直接这样问：
+
+- 「`OrderService.payOrder` 改了会影响哪些 API、页面和测试？」
+- 「`POST /inventory/deduct` 有哪些消费方？跨仓库是怎么调过来的？」
+- 「把当前 git diff 的影响变成一份测试清单」（`impact_of_diff` → `tests_for_change` → `graph_status`）
+- 「`t_order` 被哪些方法读写？缓存键 `order` 谁在用？」
+
+Agent 拿到的是方法级调用链、契约边（Feign / HTTP / MQ）和数据层边（表 / 缓存），每条边都带置信度（certain / inferred / speculative），不确定的地方会被明确标出。完整工具清单见下方 [MCP 工具](#mcp-工具)。
+
 ## 安装
 
 需要 Node >= 22.13 与 Git。上面的 `npx` 方式无需安装，也可以全局安装：
